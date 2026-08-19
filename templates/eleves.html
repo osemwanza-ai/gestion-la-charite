@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Élèves - C.S. La Charité</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f8fafc; color: #1e293b; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        input, select, button { width: 100%; padding: 10px; margin-top: 6px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 8px; }
+        button { background: #16a34a; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-back { display: inline-block; padding: 8px 14px; background: #e2e8f0; color: #334155; text-decoration: none; border-radius: 8px; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 14px; }
+        th { background-color: #2563eb; color: white; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="/" class="btn-back">⬅️ Retour au tableau de bord</a>
+
+    <div class="box">
+        <h2>Inscrire un nouvel élève</h2>
+        <form method="POST">
+            <label>Nom complet de l'élève</label>
+            <input type="text" name="nom_complet" required placeholder="ex: MWANZA David">
+
+            <label>Classe</label>
+            <select name="classe">
+                <option>1ère Maternelle</option>
+                <option>2ème Maternelle</option>
+                <option>1ère Primaire</option>
+                <option>2ème Primaire</option>
+                <option>7ème EB</option>
+                <option>8ème EB</option>
+                <option>1ère Humanité</option>
+            </select>
+
+            <label>Téléphone du Tuteur</label>
+            <input type="text" name="telephone_tuteur" placeholder="ex: +243 81 000 0000">
+
+            <button type="submit">Enregistrer l'inscription</button>
+        </form>
+    </div>
+
+    <div class="box">
+        <h3>Répertoire des élèves ({{ eleves|length }})</h3>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Matricule</th>
+                        <th>Nom complet</th>
+                        <th>Classe</th>
+                        <th>Téléphone Tuteur</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in eleves %}
+                    <tr>
+                        <td><strong>{{ e.matricule }}</strong></td>
+                        <td>{{ e.nom_complet }}</td>
+                        <td>{{ e.classe }}</td>
+                        <td>{{ e.telephone_tuteur or '-' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #94a3b8;">Aucun élève inscrit pour le moment.</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>
