@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
@@ -93,6 +93,12 @@ def liste_eleves():
     eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
     return render_template('eleves.html', eleves=eleves)
 
+# ROUTE DÉTAILS ÉLÈVE (Pour afficher la fiche complète d'un élève)
+@app.route('/eleve/<int:eleve_id>')
+def details_eleve(eleve_id):
+    eleve = Eleve.query.get_or_404(eleve_id)
+    return render_template('details_eleve.html', eleve=eleve)
+
 @app.route('/inscription', methods=['GET', 'POST'])
 def inscription():
     try:
@@ -105,7 +111,6 @@ def inscription():
             flash("⚠️ L'inscription est bloquée : les frais n'ont pas été configurés.", "danger")
             return redirect(url_for('inscription'))
 
-        # Génération dynamique du matricule (Format Ex: CH-2026-001)
         annee_en_cours = datetime.now().year
         dernier_eleve = Eleve.query.order_by(Eleve.id.desc()).first()
         suivant_id = (dernier_eleve.id + 1) if dernier_eleve else 1
@@ -197,9 +202,11 @@ def admin():
         
     return render_template('admin.html', frais_inscription=frais_inscription, rubriques=rubriques)
 
-# ROUTE PERCEPTION DES FRAIS
+# ROUTE PERCEPTION DES FRAIS (Ajout des routes au pluriel '/paiements' pour corriger la 404)
 @app.route('/paiement', methods=['GET', 'POST'])
+@app.route('/paiements', methods=['GET', 'POST'])
 @app.route('/paiement/<int:eleve_id>', methods=['GET', 'POST'])
+@app.route('/paiements/<int:eleve_id>', methods=['GET', 'POST'])
 @app.route('/payer', methods=['GET', 'POST'])
 @app.route('/payer/<int:eleve_id>', methods=['GET', 'POST'])
 def paiement(eleve_id=None):
@@ -209,6 +216,8 @@ def paiement(eleve_id=None):
     
     if request.method == 'POST':
         selected_id = request.form.get('eleve_id')
+        
+        # Si l'utilisateur vient juste de choisir un élève dans la liste déroulante
         if selected_id and not request.form.get('rubrique_id'):
             return redirect(url_for('paiement', eleve_id=selected_id))
 
@@ -252,7 +261,7 @@ def paiement(eleve_id=None):
 
     return render_template('paiement.html', eleve=eleve_selectionne, eleves=eleves, rubriques=rubriques)
 
-# ROUTE AFFICHAGE DES RAPPORTS COMPTABLES
+# ROUTE RAPPORTS COMPTABLES
 @app.route('/rapports')
 def rapports():
     type_rapport = request.args.get('type', 'tous')
@@ -260,7 +269,7 @@ def rapports():
 
     if type_rapport == 'minerval':
         query = query.join(RubriqueFrais).filter(RubriqueFrais.nom.ilike('%minerval%'))
-    elif type_rapport == 'connexes' or type_rapport == 'technique':
+    elif type_rapport in ['connexes', 'technique']:
         query = query.join(RubriqueFrais).filter(~RubriqueFrais.nom.ilike('%minerval%'), ~RubriqueFrais.nom.ilike('%inscription%'))
 
     paiements_filtrés = query.order_by(Paiement.date_paiement.desc()).all()
@@ -268,7 +277,7 @@ def rapports():
 
     return render_template('rapports.html', paiements=paiements_filtrés, total=total_encaisse, type_actuel=type_rapport)
 
-# ROUTE TÉLÉCHARGEMENT EXPORTATION EXCEL/CSV (Résout l'erreur 404)
+# ROUTE EXPORTATION EXCEL/CSV
 @app.route('/download/<type_rapport>')
 def download_rapport(type_rapport):
     try:
