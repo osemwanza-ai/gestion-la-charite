@@ -36,7 +36,7 @@
         </div>
         {% endif %}
 
-        <form method="POST">
+        <form method="POST" onsubmit="return validerInscriptions(event)">
             <!-- 1. IDENTITÉ ÉLÈVE -->
             <div class="section-title">1. Identité de l'Élève</div>
             <label>Nom complet de l'élève *</label>
@@ -51,8 +51,8 @@
                     </select>
                 </div>
                 <div>
-                    <label>Date de Naissance</label>
-                    <input type="date" name="date_naissance">
+                    <label>Date de Naissance *</label>
+                    <input type="date" name="date_naissance" id="input-date-naiss" required onchange="validerAge()">
                 </div>
             </div>
 
@@ -101,7 +101,7 @@
             <div class="grid-2">
                 <div>
                     <label>Section *</label>
-                    <select name="section" id="select-section" required onchange="adapterFormulaire()">
+                    <select name="section" id="select-section" required onchange="mettreAJourFormulaire()">
                         <option value="">-- Choisir la Section --</option>
                         <option value="Maternelle">Maternelle</option>
                         <option value="Primaire">Primaire</option>
@@ -111,7 +111,9 @@
                 </div>
                 <div>
                     <label>Classe *</label>
-                    <input type="text" name="classe" required placeholder="ex: 1ère Année, 7ème EB, 3ème...">
+                    <select name="classe" id="select-classe" required disabled>
+                        <option value="">-- Sélectionnez d'abord une section --</option>
+                    </select>
                 </div>
             </div>
 
@@ -131,12 +133,58 @@
 </div>
 
 <script>
-function adapterFormulaire() {
-    var section = document.getElementById("select-section").value;
-    var divOption = document.getElementById("div-option");
-    var inputOption = document.getElementById("input-option");
+const classesParSection = {
+    "Maternelle": [
+        "1ère Maternelle",
+        "2ème Maternelle",
+        "3ème Maternelle"
+    ],
+    "Primaire": [
+        "1ère Primaire A",
+        "1ère Primaire B",
+        "2ème Primaire A",
+        "2ème Primaire B",
+        "3ème Primaire",
+        "4ème Primaire",
+        "5ème Primaire",
+        "6ème Primaire"
+    ],
+    "Secondaire": [
+        "7ème EB",
+        "8ème EB"
+    ],
+    "Humanités": [
+        "1ère Humanités",
+        "2ème Humanités",
+        "3ème Humanités",
+        "4ème Humanités"
+    ]
+};
 
-    if (section === "Secondaire" || section === "Humanités") {
+function mettreAJourFormulaire() {
+    const sectionSelect = document.getElementById("select-section");
+    const classeSelect = document.getElementById("select-classe");
+    const divOption = document.getElementById("div-option");
+    const inputOption = document.getElementById("input-option");
+
+    const sectionChoisie = sectionSelect.value;
+
+    classeSelect.innerHTML = '<option value="">-- Choisir la Classe --</option>';
+
+    if (sectionChoisie && classesParSection[sectionChoisie]) {
+        classeSelect.disabled = false;
+        classesParSection[sectionChoisie].forEach(function(classe) {
+            const option = document.createElement("option");
+            option.value = classe;
+            option.textContent = classe;
+            classeSelect.appendChild(option);
+        });
+    } else {
+        classeSelect.disabled = true;
+        classeSelect.innerHTML = '<option value="">-- Sélectionnez d\'abord une section --</option>';
+    }
+
+    if (sectionChoisie === "Secondaire" || sectionChoisie === "Humanités") {
         divOption.style.display = "block";
         inputOption.setAttribute("required", "required");
     } else {
@@ -144,6 +192,55 @@ function adapterFormulaire() {
         inputOption.removeAttribute("required");
         inputOption.value = "";
     }
+
+    validerAge();
+}
+
+function calculerAge(dateNaissance) {
+    const dNaiss = new Date(dateNaissance);
+    const aujourdhui = new Date();
+    let age = aujourdhui.getFullYear() - dNaiss.getFullYear();
+    const m = aujourdhui.getMonth() - dNaiss.getMonth();
+    if (m < 0 || (m === 0 && aujourdhui.getDate() < dNaiss.getDate())) {
+        age--;
+    }
+    return age;
+}
+
+function validerAge() {
+    const dateInput = document.getElementById("input-date-naiss").value;
+    const section = document.getElementById("select-section").value;
+
+    if (!dateInput || !section) return true;
+
+    const age = calculerAge(dateInput);
+
+    if (section === "Maternelle" && age > 7) {
+        alert("⚠️ Restriction d'âge : Un élève de la section Maternelle ne peut pas dépasser 7 ans (Âge actuel : " + age + " ans).");
+        return false;
+    }
+    if (section === "Primaire" && (age < 6 || age > 13)) {
+        alert("⚠️ Restriction d'âge : Un élève du Primaire doit avoir entre 6 et 13 ans (Âge actuel : " + age + " ans).");
+        return false;
+    }
+    if (section === "Secondaire" && (age < 12 || age > 15)) {
+        alert("⚠️ Restriction d'âge : Un élève du Secondaire de base doit avoir entre 12 et 15 ans (Âge actuel : " + age + " ans).");
+        return false;
+    }
+    if (section === "Humanités" && (age < 13 || age > 20)) {
+        alert("⚠️ Restriction d'âge : Un élève des Humanités doit avoir entre 13 et 20 ans (Âge actuel : " + age + " ans).");
+        return false;
+    }
+
+    return true;
+}
+
+function validerInscriptions(event) {
+    if (!validerAge()) {
+        event.preventDefault();
+        return false;
+    }
+    return true;
 }
 </script>
 </body>
