@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapports Comptables - C.S. La Charité</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📊 Rapports Comptables & Journal de Caisse</h2>
+        <a href="/" class="btn btn-secondary">⬅️ Tableau de Bord</a>
+    </div>
+
+    <!-- Filtres des Rapports -->
+    <div class="btn-group mb-4 w-100" role="group">
+        <a href="{{ url_for('rapports', type='tous') }}" class="btn btn-outline-primary {% if type_actuel == 'tous' %}active{% endif %}">Tous les Encroissements</a>
+        <a href="{{ url_for('rapports', type='minerval') }}" class="btn btn-outline-primary {% if type_actuel == 'minerval' %}active{% endif %}">Minerval / Trimestres</a>
+        <a href="{{ url_for('rapports', type='connexes') }}" class="btn btn-outline-primary {% if type_actuel == 'connexes' %}active{% endif %}">Frais Connexes & Autres</a>
+    </div>
+
+    <!-- Total Général Encaissé -->
+    <div class="card shadow-sm mb-4 bg-primary text-white">
+        <div class="card-body text-center">
+            <h4 class="mb-1">Total Encaissé (Sélection)</h4>
+            <h2 class="display-5 fw-bold mb-0">{{ "{:,.0f}".format(total) }} FC</h2>
+        </div>
+    </div>
+
+    <!-- Tableau de suivi -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Matricule</th>
+                        <th>Élève</th>
+                        <th>Rubrique</th>
+                        <th>Période</th>
+                        <th class="text-end">Montant Versé</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in paiements %}
+                    <tr>
+                        <td>{{ p.date_paiement.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td><span class="badge bg-secondary">{{ p.eleve.matricule }}</span></td>
+                        <td><strong>{{ p.eleve.nom_complet }}</strong></td>
+                        <td>{{ p.rubrique.nom }}</td>
+                        <td><span class="badge bg-info text-dark">{{ p.trimestre }}</span></td>
+                        <td class="text-end fw-bold text-success">{{ "{:,.0f}".format(p.montant) }} FC</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Aucune transaction trouvée pour cette catégorie.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
