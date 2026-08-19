@@ -80,15 +80,23 @@ def init_db():
 def index():
     try:
         eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
-        # On charge dashboard.html au lieu de index.html
         return render_template('dashboard.html', eleves=eleves)
-    except Exception as e:
+    except Exception:
         return render_template('dashboard.html', eleves=[])
 
 @app.route('/eleves')
 def liste_eleves():
     eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
     return render_template('eleves.html', eleves=eleves)
+
+@app.route('/admin')
+def admin():
+    return render_template('admin.html')
+
+@app.route('/paiements')
+def paiements():
+    paiements_liste = Paiement.query.order_by(Paiement.date_paiement.desc()).all()
+    return render_template('paiements.html', paiements=paiements_liste)
 
 @app.route('/inscription', methods=['GET', 'POST'])
 def inscription():
@@ -181,7 +189,6 @@ def payer(eleve_id):
         total_deja_paye = sum(p.montant for p in paiements_existants)
         reste_a_payer = montant_fixe - total_deja_paye
 
-        # Restrictions et plafonnement
         if reste_a_payer <= 0:
             flash(f"⚠️ Le solde pour {rubrique.nom} ({trimestre}) est déjà totalement apuré (0 FC restant).", "danger")
             return redirect(url_for('payer', eleve_id=eleve.id))
