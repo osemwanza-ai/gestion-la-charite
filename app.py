@@ -47,6 +47,7 @@ class Eleve(db.Model):
     classe = db.Column(db.String(50), default="1ère")
     option = db.Column(db.String(100), default="")
     date_inscription = db.Column(db.DateTime, default=datetime.utcnow)
+    paiements = db.relationship('Paiement', backref='eleve_obj', lazy=True)
 
 class Paiement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -60,13 +61,13 @@ class Paiement(db.Model):
     rubrique = db.relationship('RubriqueFrais', lazy=True)
     eleve = db.relationship('Eleve', lazy=True)
 
-# --- CREATION & AUTO-MIGRATION DES TABLES ---
+# --- AUTO-MIGRATION ---
 with app.app_context():
     db.create_all()
     try:
         db.session.execute(text("ALTER TABLE paiement ADD COLUMN IF NOT EXISTS mode_paiement VARCHAR(50) DEFAULT 'Espèces';"))
         db.session.commit()
-    except Exception as e:
+    except Exception:
         db.session.rollback()
 
 # --- ROUTES ---
@@ -99,8 +100,26 @@ def index():
 
 @app.route('/eleves')
 def liste_eleves():
-    eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
-    return render_template('eleves.html', eleves=eleves)
+    section_filter = request.args.get('section', '')
+    classe_filter = request.args.get('classe', '').strip()
+    statut_filter = request.args.get('statut', '')
+
+    query = Eleve.query
+
+    if section_filter:
+        query = query.filter(Eleve.section == section_filter)
+    if classe_filter:
+        query = query.filter(Eleve.classe.ilike(f"%{classe_filter}%"))
+
+    eleves = query.order_by(Eleve.date_inscription.desc()).all()
+
+    # Filtrage par statut de paiement si demandé
+    if statut_filter == 'paye':
+        eleves = [e for e in eleves if len(e.paiements) > 0]
+    elif statut_filter == 'non_paye':
+        eleves = [e for e in eleves if len(e.paiements) == 0]
+
+    return render_template('eleves.html', eleves=eleves, section_sel=section_filter, classe_sel=classe_filter, statut_sel=statut_filter)
 
 @app.route('/inscription', methods=['GET', 'POST'])
 def inscription():
@@ -130,7 +149,7 @@ def inscription():
             db.session.add(e)
             db.session.commit()
             flash(f"✅ Élève inscrit avec succès ({mat})", "success")
-            return redirect(url_for('index'))
+            return redirect(url_for('imprimer_recu', type_recu='inscription', id_recu=e.id))
         except Exception as err:
             db.session.rollback()
             flash(f"⚠️ Erreur d'enregistrement : {str(err)}", "danger")
@@ -183,7 +202,7 @@ def paiement(eleve_id=None):
                 db.session.add(p)
                 db.session.commit()
                 flash("Paiement enregistré !", "success")
-                return redirect(url_for('paiement', eleve_id=eleve_sel.id))
+                return redirect(url_for('imprimer_recu', type_recu='paiement', id_recu=p.id))
 
         historique = Paiement.query.filter_by(eleve_id=eleve_sel.id).order_by(Paiement.date_paiement.desc()).all() if eleve_sel else []
         return render_template('paiement.html', eleve=eleve_sel, eleves=eleves, rubriques=rubriques, historique=historique)
@@ -191,6 +210,16 @@ def paiement(eleve_id=None):
         db.session.rollback()
         flash(f"Erreur : {str(e)}", "danger")
         return redirect(url_for('index'))
+
+@app.route('/imprimer/<type_recu>/<int:id_recu>')
+def imprimer_recu(type_recu, id_recu):
+    if type_recu == 'paiement':
+        paiement_obj = Paiement.query.get_or_404(id_recu)
+        return render_template('recu_print.html', type='paiement', p=paiement_obj, e=paiement_obj.eleve)
+    else:
+        eleve_obj = Eleve.query.get_or_404(id_recu)
+        frais = FraisInscription.query.first()
+        return render_template('recu_print.html', type='inscription', e=eleve_obj, frais=frais)
 
 @app.route('/download/<type_rapport>')
 def download_rapport(type_rapport):
