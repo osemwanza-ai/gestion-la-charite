@@ -3,14 +3,15 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
 
-# --- 1. INITIALISATION DE L'APPLICATION ---
+# 1. INITIALISATION DE L'APPLICATION
 app = Flask(__name__)
 app.secret_key = "cle_secrete_complexe_la_charite"
 
-# --- 2. CONFIGURATION DE LA BASE DE DONNÉES ---
+# 2. CONFIGURATION DE LA BASE DE DONNÉES
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
+    # Render donne une URL commençant par postgres:// qu'il faut corriger pour SQLAlchemy
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
@@ -22,7 +23,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# --- 3. MODÈLES DE DONNÉES ---
+# 3. MODÈLES DE DONNÉES
 class FraisInscription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     montant = db.Column(db.Float, nullable=False)
@@ -58,37 +59,47 @@ class Paiement(db.Model):
     date_paiement = db.Column(db.DateTime, default=datetime.utcnow)
     rubrique = db.relationship('RubriqueFrais')
 
-# --- 4. CRÉATION AUTOMATIQUE DES TABLES AU DÉMARRAGE ---
+# 4. INITIALISATION SÉCURISÉE
 with app.app_context():
     try:
         db.create_all()
-        print("✅ Tables de la base de données créées avec succès !")
     except Exception as e:
-        print(f"⚠️ Remarque lors de l'initialisation : {e}")
+        print(f"Erreur initialisation DB : {e}")
 
-# --- 5. ROUTES ET LOGIQUE METIER ---
-
+# 5. ROUTES
 @app.route('/init-db')
 def init_db():
-    """Route de secours pour forcer la création des tables PostgreSQL dans le navigateur"""
     try:
         db.create_all()
-        return "✅ Toutes les tables (eleve, paiement, rubrique_frais, frais_inscription) ont été créées dans la base PostgreSQL ! <br><br><a href='/'>Retourner à l'accueil</a>"
+        return "✅ Base de données PostgreSQL initialisée avec succès ! <br><br><a href='/'>Aller à l'accueil</a>"
     except Exception as e:
-        return f"❌ Erreur lors de la création des tables : {str(e)}"
+        return f"❌ Impossible de créer les tables. Erreur : {str(e)}"
 
 @app.route('/')
 def index():
     try:
         eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
-    except Exception:
-        # En cas de table non encore créée lors du tout premier appel
-        eleves = []
-    return render_template('index.html', eleves=eleves)
+        return render_template('index.html', eleves=eleves)
+    except Exception as e:
+        # Si la base n'est pas encore accessible, on affiche un message clair au lieu d'une erreur 500
+        return f"""
+        <div style="padding: 30px; font-family: sans-serif;">
+            <h2 style="color: #dc2626;">⚠️ La base de données nécessite une initialisation</h2>
+            <p>L'application est en ligne mais les tables ne sont pas encore prêtes.</p>
+            <p><strong>Détail de l'erreur :</strong> {str(e)}</p>
+            <br>
+            <a href="/init-db" style="padding: 10px 20px; background: #16a34a; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                👉 Cliquez ici pour créer les tables PostgreSQL
+            </a>
+        </div>
+        """
 
 @app.route('/inscription', methods=['GET', 'POST'])
 def inscription():
-    frais = FraisInscription.query.first()
+    try:
+        frais = FraisInscription.query.first()
+    except Exception:
+        frais = None
     
     if request.method == 'POST':
         if not frais:
@@ -143,8 +154,13 @@ def frais():
 
         return redirect(url_for('frais'))
 
-    frais_inscription = FraisInscription.query.first()
-    rubriques = RubriqueFrais.query.all()
+    try:
+        frais_inscription = FraisInscription.query.first()
+        rubriques = RubriqueFrais.query.all()
+    except Exception:
+        frais_inscription = None
+        rubriques = []
+        
     return render_template('frais.html', frais_inscription=frais_inscription, rubriques=rubriques)
 
 @app.route('/payer/<int:eleve_id>', methods=['GET', 'POST'])
@@ -160,7 +176,6 @@ def payer(eleve_id):
         rubrique = RubriqueFrais.query.get(rubrique_id)
         montant_fixe = rubrique.montant
 
-        # Vérification des versement déjà faits
         paiements_existants = Paiement.query.filter_by(
             eleve_id=eleve.id, 
             rubrique_id=rubrique_id, 
@@ -170,7 +185,6 @@ def payer(eleve_id):
         total_deja_paye = sum(p.montant for p in paiements_existants)
         reste_a_payer = montant_fixe - total_deja_paye
 
-        # Contrôles du montant
         if reste_a_payer <= 0:
             flash(f"⚠️ Le solde pour {rubrique.nom} ({trimestre}) est déjà totalement apuré (0 FC restant).", "danger")
             return redirect(url_for('payer', eleve_id=eleve.id))
@@ -179,7 +193,6 @@ def payer(eleve_id):
             flash(f"⚠️ Le montant saisi ({montant_verse:,.0f} FC) dépasse le solde du {trimestre}. Le reste à payer est de {reste_a_payer:,.0f} FC.", "warning")
             return redirect(url_for('payer', eleve_id=eleve.id))
 
-        # Enregistrement du paiement
         nouveau_paiement = Paiement(
             eleve_id=eleve.id,
             rubrique_id=rubrique_id,
