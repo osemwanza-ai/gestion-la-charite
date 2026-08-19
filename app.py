@@ -1,15 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
-import openpyxl
-from io import BytesIO
 from datetime import datetime
 import os
 
-# 1. INITIALISATION DE L'APPLICATION
+# --- 1. INITIALISATION DE L'APPLICATION ---
 app = Flask(__name__)
 app.secret_key = "cle_secrete_complexe_la_charite"
 
-# 2. CONFIGURATION BASE DE DONNÉES (PERSISTANTE EN PROD / SQLITE EN LOCAL)
+# --- 2. CONFIGURATION DE LA BASE DE DONNÉES ---
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
@@ -24,7 +22,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# 3. MODÈLES DE DONNÉES
+# --- 3. MODÈLES DE DONNÉES ---
 class FraisInscription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     montant = db.Column(db.Float, nullable=False)
@@ -60,15 +58,32 @@ class Paiement(db.Model):
     date_paiement = db.Column(db.DateTime, default=datetime.utcnow)
     rubrique = db.relationship('RubriqueFrais')
 
-# Initialisation de la structure de base
+# --- 4. CRÉATION AUTOMATIQUE DES TABLES AU DÉMARRAGE ---
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+        print("✅ Tables de la base de données créées avec succès !")
+    except Exception as e:
+        print(f"⚠️ Remarque lors de l'initialisation : {e}")
 
-# 4. ROUTES ET LOGIQUE APPLICATIVE
+# --- 5. ROUTES ET LOGIQUE METIER ---
+
+@app.route('/init-db')
+def init_db():
+    """Route de secours pour forcer la création des tables PostgreSQL dans le navigateur"""
+    try:
+        db.create_all()
+        return "✅ Toutes les tables (eleve, paiement, rubrique_frais, frais_inscription) ont été créées dans la base PostgreSQL ! <br><br><a href='/'>Retourner à l'accueil</a>"
+    except Exception as e:
+        return f"❌ Erreur lors de la création des tables : {str(e)}"
 
 @app.route('/')
 def index():
-    eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
+    try:
+        eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
+    except Exception:
+        # En cas de table non encore créée lors du tout premier appel
+        eleves = []
     return render_template('index.html', eleves=eleves)
 
 @app.route('/inscription', methods=['GET', 'POST'])
@@ -145,7 +160,7 @@ def payer(eleve_id):
         rubrique = RubriqueFrais.query.get(rubrique_id)
         montant_fixe = rubrique.montant
 
-        # Vérification des versements déjà effectués
+        # Vérification des versement déjà faits
         paiements_existants = Paiement.query.filter_by(
             eleve_id=eleve.id, 
             rubrique_id=rubrique_id, 
@@ -155,9 +170,9 @@ def payer(eleve_id):
         total_deja_paye = sum(p.montant for p in paiements_existants)
         reste_a_payer = montant_fixe - total_deja_paye
 
-        # Contrôle du solde et plafonnement
+        # Contrôles du montant
         if reste_a_payer <= 0:
-            flash(f"⚠️ Le solde pour {rubrique.nom} ({trimestre}) est déjà totalement apuré. Veuillez sélectionner le trimestre suivant.", "danger")
+            flash(f"⚠️ Le solde pour {rubrique.nom} ({trimestre}) est déjà totalement apuré (0 FC restant).", "danger")
             return redirect(url_for('payer', eleve_id=eleve.id))
 
         if montant_verse > reste_a_payer:
@@ -175,7 +190,7 @@ def payer(eleve_id):
         db.session.add(nouveau_paiement)
         db.session.commit()
 
-        flash(f"✅ Paiement enregistré. Reste à payer pour ce trimestre : {reste_a_payer - montant_verse:,.0f} FC.", "success")
+        flash(f"✅ Paiement de {montant_verse:,.0f} FC enregistré. Reste à payer : {reste_a_payer - montant_verse:,.0f} FC.", "success")
         return redirect(url_for('index'))
 
     return render_template('payer.html', eleve=eleve, rubriques=rubriques)
