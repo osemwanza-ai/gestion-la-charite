@@ -31,6 +31,8 @@ class RubriqueFrais(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nom = db.Column(db.String(100), nullable=False)
     montant = db.Column(db.Float, nullable=False)
+    sections = db.Column(db.String(200), default="Toutes")
+    options = db.Column(db.String(200), default="Toutes")
 
 class Eleve(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -107,7 +109,7 @@ def inscription():
     
     if request.method == 'POST':
         if not frais:
-            flash("⚠️ L'inscription est bloquée : les frais d'inscription n'ont pas encore été configurés.", "danger")
+            flash("⚠️ L'inscription est bloquée : les frais n'ont pas été configurés.", "danger")
             return redirect(url_for('inscription'))
 
         nouveau_eleve = Eleve(
@@ -151,10 +153,22 @@ def frais():
         elif action == 'ajouter_rubrique':
             nom = request.form.get('nom')
             montant = float(request.form.get('montant'))
-            nouvelle_rubrique = RubriqueFrais(nom=nom, montant=montant)
+            
+            sections_list = request.form.getlist('sections')
+            options_list = request.form.getlist('options')
+            
+            sections_str = ", ".join(sections_list) if sections_list else "Toutes"
+            options_str = ", ".join(options_list) if options_list else "Toutes"
+
+            nouvelle_rubrique = RubriqueFrais(
+                nom=nom, 
+                montant=montant,
+                sections=sections_str,
+                options=options_str
+            )
             db.session.add(nouvelle_rubrique)
             db.session.commit()
-            flash("Rubrique de frais ajoutée.", "success")
+            flash("✅ Rubrique de frais enregistrée avec succès.", "success")
 
         return redirect(url_for('frais'))
 
@@ -190,11 +204,11 @@ def payer(eleve_id):
         reste_a_payer = montant_fixe - total_deja_paye
 
         if reste_a_payer <= 0:
-            flash(f"⚠️ Le solde pour {rubrique.nom} ({trimestre}) est déjà totalement apuré (0 FC restant).", "danger")
+            flash(f"⚠️ Le solde pour {rubrique.nom} ({trimestre}) est apuré.", "danger")
             return redirect(url_for('payer', eleve_id=eleve.id))
 
         if montant_verse > reste_a_payer:
-            flash(f"⚠️ Le montant saisi ({montant_verse:,.0f} FC) dépasse le solde du {trimestre}. Le reste à payer est de {reste_a_payer:,.0f} FC.", "warning")
+            flash(f"⚠️ Le montant dépasse le solde du {trimestre} ({reste_a_payer:,.0f} FC restant).", "warning")
             return redirect(url_for('payer', eleve_id=eleve.id))
 
         nouveau_paiement = Paiement(
