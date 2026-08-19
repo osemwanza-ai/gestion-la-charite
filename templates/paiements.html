@@ -3,54 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enregistrer un Paiement</title>
+    <title>Perception des Frais - C.S. La Charité</title>
     <style>
-        body { font-family: sans-serif; background: #f8fafc; padding: 20px; }
-        .form-box { background: white; padding: 20px; border-radius: 12px; max-width: 500px; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        input, select, button { width: 100%; padding: 12px; margin-top: 8px; margin-bottom: 16px; border: 1px solid #cbd5e1; border-radius: 8px; }
-        button { background: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; }
-        .btn-back { display: block; text-align: center; text-decoration: none; color: #64748b; margin-top: 10px; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f8fafc; color: #1e293b; padding: 20px; }
+        .container { max-width: 700px; margin: 0 auto; }
+        .box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        input, select, button { width: 100%; padding: 11px; margin-top: 6px; margin-bottom: 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; }
+        button { background: #9333ea; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-back { display: inline-block; padding: 8px 14px; background: #e2e8f0; color: #334155; text-decoration: none; border-radius: 8px; margin-bottom: 15px; }
+        .recu-box { background: #f0fdf4; border: 1px solid #86efac; padding: 15px; border-radius: 8px; margin-top: 15px; }
     </style>
 </head>
 <body>
-<div class="form-box">
-    <h2>Nouveau Paiement</h2>
-    <form method="POST">
-        <label>Nom de l'élève</label>
-        <input type="text" name="nom_eleve" required placeholder="ex: KABAMBA Marc">
-
-        <label>Classe</label>
-        <select name="classe">
-            <option>1ère Maternelle</option>
-            <option>2ème Maternelle</option>
-            <option>1ère Primaire</option>
-            <option>2ème Primaire</option>
-            <option>7ème EB</option>
-            <option>8ème EB</option>
-            <option>1ère Humanité</option>
-        </select>
-
-        <label>Type de frais</label>
-        <select name="type_frais">
-            <option>Frais de Minerval</option>
-            <option>Frais d'Inscription</option>
-            <option>Frais d'Examen</option>
-            <option>Uniforme / Tricot</option>
-        </select>
-
-        <label>Montant (FC)</label>
-        <input type="number" name="montant" required placeholder="ex: 50000">
-
-        <button type="submit">Enregistrer le Paiement</button>
-    </form>
-
-    {% if recu %}
-    <div style="background: #dcfce7; padding: 12px; border-radius: 8px; margin-top: 10px;">
-        ✔️ Paiement enregistré avec succès pour {{ recu.nom }} !
-    </div>
-    {% endif %}
-
+<div class="container">
     <a href="/" class="btn-back">⬅️ Retour au tableau de bord</a>
+
+    <div class="box">
+        <h2 style="margin-bottom: 15px; color: #581c87;">Guichet d'Encaissement des Frais</h2>
+        
+        <form method="POST">
+            <label><strong>1. Sélectionner l'élève (Inscrits uniquement) *</strong></label>
+            <select name="eleve_id" required>
+                <option value="">-- Choisissez un élève --</option>
+                {% for e in eleves %}
+                <option value="{{ e.id }}">{{ e.nom_complet }} ({{ e.classe }} - {{ e.matricule }})</option>
+                {% endfor %}
+            </select>
+
+            <label><strong>2. Type de Frais à Percevoir *</strong></label>
+            <select name="categorie_frais" required>
+                <option value="">-- Sélectionnez la catégorie --</option>
+                {% for f in frais_liste %}
+                {% if f.type_frais != 'INSCRIPTION' %}
+                <option value="{{ f.type_frais }}">{{ f.type_frais }} - Montant réf: {{ f.montant }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+
+            <label><strong>3. Préciser le Trimestre (Uniquement si Minerval)</strong></label>
+            <select name="trimestre">
+                <option value="-">Non concerné</option>
+                <option value="1er Trimestre">1er Trimestre</option>
+                <option value="2ème Trimestre">2ème Trimestre</option>
+                <option value="3ème Trimestre">3ème Trimestre</option>
+            </select>
+
+            <label><strong>4. Option / Motif complémentaire (Si frais technique ou connexe)</strong></label>
+            <input type="text" name="motif_detail" placeholder="ex: Option Électricité, Achat Journal de classe...">
+
+            <label><strong>5. Montant Perçu ($ ou FC) *</strong></label>
+            <input type="number" step="0.01" name="montant" required placeholder="ex: 40">
+
+            <button type="submit">Valider et Enregistrer le Paiement</button>
+        </form>
+
+        {% if recu %}
+        <div class="recu-box">
+            <h3 style="color: #166534; margin-bottom: 8px;">✅ Reçu d'Encaissement Généré</h3>
+            <p><strong>Élève :</strong> {{ recu.nom }} ({{ recu.classe }})</p>
+            <p><strong>Frais :</strong> {{ recu.categorie }} {% if recu.trimestre != '-' %}({{ recu.trimestre }}){% endif %}</p>
+            <p><strong>Montant Payé :</strong> {{ recu.montant }}</p>
+            <p><strong>Date & Heure :</strong> {{ recu.date_heure }}</p>
+        </div>
+        {% endif %}
+    </div>
 </div>
 </body>
 </html>
