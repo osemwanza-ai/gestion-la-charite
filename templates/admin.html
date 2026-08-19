@@ -7,14 +7,15 @@
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
         body { background-color: #f8fafc; color: #1e293b; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        input, select, button { width: 100%; padding: 10px; margin-top: 6px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 8px; }
-        button { background: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .container { max-width: 850px; margin: 0 auto; }
+        .box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        input, select, button { width: 100%; padding: 10px; margin-top: 6px; margin-bottom: 14px; border: 1px solid #cbd5e1; border-radius: 8px; }
+        button { background: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; padding: 12px; }
         .btn-back { display: inline-block; padding: 8px 14px; background: #e2e8f0; color: #334155; text-decoration: none; border-radius: 8px; margin-bottom: 15px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 14px; }
         th { background-color: #1e3a8a; color: white; }
+        #div-option { display: none; background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 14px; border-left: 4px solid #2563eb; }
     </style>
 </head>
 <body>
@@ -22,51 +23,87 @@
     <a href="/" class="btn-back">⬅️ Retour au tableau de bord</a>
 
     <div class="box">
-        <h2>Configuration Administrateur des Frais</h2>
+        <h2 style="margin-bottom: 15px; color: #1e3a8a;">Configuration Administrateur des Frais</h2>
         <form method="POST">
-            <label>Type de Frais à Activer</label>
+            <label><strong>1. Type de Frais</strong></label>
             <select name="type_frais" required>
-                <option value="INSCRIPTION">Frais d'Inscription (Fixe)</option>
-                <option value="MINERVAL">Frais Scolaire Minerval</option>
-                <option value="TECHNIQUE">Frais Technique (Secondaire/Humanités)</option>
-                <option value="CONNEXE">Frais Connexes (Divers)</option>
+                <option value="INSCRIPTION">Frais d'Inscription</option>
+                <option value="MINERVAL">Frais Scolaire (Minerval)</option>
+                <option value="TECHNIQUE">Frais Technique</option>
+                <option value="CONNEXE">Frais Connexe</option>
             </select>
 
-            <label>Montant Exigé ($ ou FC)</label>
+            <label><strong>2. Section Concernée *</strong></label>
+            <select name="section" id="select-section" required onchange="verifierSection()">
+                <option value="">-- Sélectionner la Section --</option>
+                <option value="Maternelle">Maternelle</option>
+                <option value="Primaire">Primaire</option>
+                <option value="Secondaire">Secondaire</option>
+                <option value="Humanités">Humanités</option>
+            </select>
+
+            <!-- CHAMP DYNAMIQUE OPTION (Visible uniquement pour Secondaire & Humanités) -->
+            <div id="div-option">
+                <label style="color: #1e3a8a;"><strong>3. Préciser l'Option / Section Technique *</strong></label>
+                <input type="text" name="option" id="input-option" placeholder="ex: Électricité, Commerciale & Gestion, Coupe & Couture, Pédagogie...">
+            </div>
+
+            <label><strong>4. Montant Exigé ($ ou FC) *</strong></label>
             <input type="number" step="0.01" name="montant" required placeholder="ex: 50">
 
-            <label>Précisions / Motifs / Options concernées</label>
-            <input type="text" name="description" placeholder="ex: Option Électricité, ou 1er Trimestre">
+            <label><strong>5. Description / Motif complémentaire</strong></label>
+            <input type="text" name="description" placeholder="ex: Pour travaux pratiques, 1er Trimestre, etc.">
 
-            <button type="submit">Enregistrer et Autoriser ce Frais</button>
+            <button type="submit">Enregistrer et Activer ce Frais</button>
         </form>
     </div>
 
     <div class="box">
-        <h3>Grille Tarifaire Actuelle</h3>
+        <h3>Grille Tarifaire Paramétrée</h3>
         <table>
             <thead>
                 <tr>
-                    <th>Type de Frais</th>
-                    <th>Montant Fixé</th>
-                    <th>Description / Précision</th>
+                    <th>Type</th>
+                    <th>Section</th>
+                    <th>Option</th>
+                    <th>Montant</th>
+                    <th>Description</th>
                 </tr>
             </thead>
             <tbody>
                 {% for f in frais %}
                 <tr>
                     <td><strong>{{ f.type_frais }}</strong></td>
+                    <td>{{ f.section }}</td>
+                    <td>{{ f.option or '-' }}</td>
                     <td>{{ f.montant }}</td>
                     <td>{{ f.description or '-' }}</td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="3" style="text-align: center; color: #94a3b8;">Aucun frais configuré. L'encaissement est bloqué.</td>
+                    <td colspan="5" style="text-align: center; color: #94a3b8;">Aucun frais paramétré.</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+
+<script>
+function verifierSection() {
+    var sectionSelect = document.getElementById("select-section").value;
+    var divOption = document.getElementById("div-option");
+    var inputOption = document.getElementById("input-option");
+
+    if (sectionSelect === "Secondaire" || sectionSelect === "Humanités") {
+        divOption.style.display = "block";
+        inputOption.setAttribute("required", "required");
+    } else {
+        divOption.style.display = "none";
+        inputOption.removeAttribute("required");
+        inputOption.value = "";
+    }
+}
+</script>
 </body>
 </html>
