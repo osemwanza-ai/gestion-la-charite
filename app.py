@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file
+from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import openpyxl
 from io import BytesIO
@@ -26,18 +26,15 @@ class ConfigurationFrais(db.Model):
 class Eleve(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     matricule = db.Column(db.String(50), unique=True, nullable=False)
-    # Identité Élève
     nom_complet = db.Column(db.String(100), nullable=False)
     sexe = db.Column(db.String(10), nullable=True)
     date_naissance = db.Column(db.String(50), nullable=True)
     lieu_naissance = db.Column(db.String(100), nullable=True)
     adresse = db.Column(db.String(200), nullable=True)
-    # Responsable
     nom_responsables = db.Column(db.String(100), nullable=False)
     lien_parente = db.Column(db.String(50), nullable=True)
     telephone_principal = db.Column(db.String(20), nullable=False)
     telephone_secondaire = db.Column(db.String(20), nullable=True)
-    # Parcours
     section = db.Column(db.String(50), nullable=False)
     classe = db.Column(db.String(50), nullable=False)
     option = db.Column(db.String(100), nullable=True)
@@ -95,7 +92,7 @@ def inscription():
 
     if request.method == 'POST':
         if not frais_inscription:
-            return "Erreur : Le frais d'inscription doit d'abord être configuré dans l'Espace Admin.", 400
+            return "Erreur : Le frais d'inscription doit être configuré dans l'Espace Admin.", 400
 
         nom = request.form.get('nom_complet')
         sexe = request.form.get('sexe')
@@ -142,7 +139,7 @@ def inscription():
             classe=f"{classe} - {section}",
             categorie_frais='INSCRIPTION',
             montant=frais_inscription.montant,
-            motif_detail="Frais d'inscription obligatoire"
+            motif_detail="Frais d'inscription"
         )
         db.session.add(paiement_ins)
         db.session.commit()
@@ -195,8 +192,98 @@ def paiements():
 
 @app.route('/eleves')
 def eleves():
-    liste = Eleve.query.order_by(Eleve.nom_complet.asc()).all()
-    return render_template('eleves.html', eleves=liste)
+    query = Eleve.query
+
+    f_section = request.args.get('section')
+    f_classe = request.args.get('classe')
+    f_frais = request.args.get('type_frais')
+
+    if f_section:
+        query = query.filter_by(section=f_section)
+    if f_classe:
+        query = query.filter(Eleve.classe.ilike(f"%{f_classe}%"))
+    
+    eleves_liste = query.order_by(Eleve.nom_complet.asc()).all()
+
+    # Filtrage selon le paiement effectif si le filtre de frais est activé
+    if f_frais:
+        eleves_filtrer = []
+        for e in eleves_liste:
+            paiements_e = Paiement.query.filter_by(eleve_id=e.id).all()
+            if f_frais == 'INSCRIPTION' and any(p.categorie_frais == 'INSCRIPTION' for p in paiements_e):
+                eleves_filtrer.append(e)
+            elif f_frais == 'MINERVAL_T1' and any(p.categorie_frais == 'MINERVAL' and p.trimestre == '1er Trimestre' for p in paiements_e):
+                eleves_filtrer.append(e)
+            elif f_frais == 'MINERVAL_T2' and any(p.categorie_frais == 'MINERVAL' and p.trimestre == '2ème Trimestre' for p in paiements_e):
+                eleves_filtrer.append(e)
+            elif f_frais == 'MINERVAL_T3' and any(p.categorie_frais == 'MINERVAL' and p.trimestre == '3ème Trimestre' for p in paiements_e):
+                eleves_filtrer.append(e)
+            elif f_frais == 'TECHNIQUE' and any(p.categorie_frais == 'TECHNIQUE' for p in paiements_e):
+                eleves_filtrer.append(e)
+            elif f_frais == 'CONNEXE' and any(p.categorie_frais == 'CONNEXE' for p in paiements_e):
+                eleves_filtrer.append(e)
+        eleves_liste = eleves_filtrer
+
+    return render_template('eleves.html', eleves=eleves_liste)
+
+@app.route('/api/eleve/<int:eleve_id>')
+def api_eleve_details(eleve_id):
+    eleve = Eleve.query.get_or_404(eleve_id)
+    paiements = Paiement.query.filter_by(eleve_id=eleve.id).all()
+    configs = ConfigurationFrais.query.all()
+
+    # Calculs Financiers par Categorie
+    bilan = []
+    
+    # Categories à analyser
+    categories_frais = [
+        ('INSCRIPTION', 'Inscription', '-'),
+        ('MINERVAL', 'Minerval - 1er Trimestre', '1er Trimestre'),
+        ('MINERVAL', 'Minerval - 2ème Trimestre', '2ème Trimestre'),
+        ('MINERVAL', 'Minerval - 3ème Trimestre', '3ème Trimestre'),
+        ('TECHNIQUE', 'Frais Technique', '-'),
+        ('CONNEXE', 'Frais Connexe', '-')
+    ]
+
+    for cat_code, libelle, trim in categories_frais:
+        # Trouver la config tarifaire applicable (par section)
+        config_tarif = ConfigurationFrais.query.filter_by(type_frais=cat_code, section=eleve.section).first()
+        if not config_tarif:
+            config_tarif = ConfigurationFrais.query.filter_by(type_frais=cat_code).first()
+
+        exige = config_tarif.montant if config_tarif else 0.0
+
+        if trim != '-':
+            paye = sum(p.montant for p in paiements if p.categorie_frais == cat_code and p.trimestre == trim)
+        else:
+            paye = sum(p.montant for p in paiements if p.categorie_frais == cat_code)
+
+        reste = exige - paye if exige > 0 else 0.0
+
+        bilan.append({
+            'libelle': libelle,
+            'exige': exige,
+            'paye': paye,
+            'reste': max(0.0, reste)
+        })
+
+    return jsonify({
+        'matricule': eleve.matricule,
+        'nom_complet': eleve.nom_complet,
+        'sexe': eleve.sexe,
+        'date_naissance': eleve.date_naissance or 'N/A',
+        'lieu_naissance': eleve.lieu_naissance or 'N/A',
+        'adresse': eleve.adresse or 'N/A',
+        'nom_responsables': eleve.nom_responsables,
+        'lien_parente': eleve.lien_parente,
+        'telephone_principal': eleve.telephone_principal,
+        'telephone_secondaire': eleve.telephone_secondaire or 'N/A',
+        'section': eleve.section,
+        'classe': eleve.classe,
+        'option': eleve.option or 'N/A',
+        'date_inscription': eleve.date_inscription,
+        'bilan': bilan
+    })
 
 @app.route('/download/<type_rapport>')
 def download_rapport(type_rapport):
