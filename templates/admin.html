@@ -1,1 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paramétrage des Frais - C.S. La Charité</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f8fafc; color: #1e293b; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        input, select, button { width: 100%; padding: 10px; margin-top: 6px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 8px; }
+        button { background: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-back { display: inline-block; padding: 8px 14px; background: #e2e8f0; color: #334155; text-decoration: none; border-radius: 8px; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 14px; }
+        th { background-color: #1e3a8a; color: white; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="/" class="btn-back">⬅️ Retour au tableau de bord</a>
 
+    <div class="box">
+        <h2>Configuration Administrateur des Frais</h2>
+        <form method="POST">
+            <label>Type de Frais à Activer</label>
+            <select name="type_frais" required>
+                <option value="INSCRIPTION">Frais d'Inscription (Fixe)</option>
+                <option value="MINERVAL">Frais Scolaire Minerval</option>
+                <option value="TECHNIQUE">Frais Technique (Secondaire/Humanités)</option>
+                <option value="CONNEXE">Frais Connexes (Divers)</option>
+            </select>
+
+            <label>Montant Exigé ($ ou FC)</label>
+            <input type="number" step="0.01" name="montant" required placeholder="ex: 50">
+
+            <label>Précisions / Motifs / Options concernées</label>
+            <input type="text" name="description" placeholder="ex: Option Électricité, ou 1er Trimestre">
+
+            <button type="submit">Enregistrer et Autoriser ce Frais</button>
+        </form>
+    </div>
+
+    <div class="box">
+        <h3>Grille Tarifaire Actuelle</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Type de Frais</th>
+                    <th>Montant Fixé</th>
+                    <th>Description / Précision</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in frais %}
+                <tr>
+                    <td><strong>{{ f.type_frais }}</strong></td>
+                    <td>{{ f.montant }}</td>
+                    <td>{{ f.description or '-' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" style="text-align: center; color: #94a3b8;">Aucun frais configuré. L'encaissement est bloqué.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
