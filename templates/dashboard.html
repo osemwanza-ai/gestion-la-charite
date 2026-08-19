@@ -10,18 +10,21 @@
         .container { max-width: 900px; margin: 0 auto; }
         .header { text-align: center; margin-bottom: 30px; }
         .header h1 { color: #1e3a8a; font-size: 26px; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-left: 5px solid #2563eb; }
         .stat-card h3 { font-size: 14px; color: #64748b; margin-bottom: 5px; }
         .stat-card p { font-size: 22px; font-weight: bold; color: #0f172a; }
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
-        .card { background: white; padding: 20px; border-radius: 12px; text-decoration: none; color: #1e293b; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-center: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s; }
+        .card { background: white; padding: 20px; border-radius: 12px; text-decoration: none; color: #1e293b; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s; }
         .card:hover { transform: translateY(-3px); }
         .icon-circle { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 10px; }
         .bg-blue { background: #dbeafe; color: #2563eb; }
         .bg-green { background: #dcfce7; color: #16a34a; }
         .bg-purple { background: #f3e8ff; color: #9333ea; }
         .bg-orange { background: #ffedd5; color: #ea580c; }
+        .bg-red { background: #fee2e2; color: #dc2626; }
+        .export-box { margin-top: 25px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .btn-export { display: inline-block; padding: 10px 15px; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 13px; margin-right: 8px; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -43,23 +46,33 @@
     </div>
 
     <div class="menu-grid">
+        <a href="/admin" class="card">
+            <div class="icon-circle bg-red">⚙️</div>
+            <div class="card-title">Configuration Admin</div>
+        </a>
         <a href="/inscription" class="card">
             <div class="icon-circle bg-green">✍️</div>
             <div class="card-title">Nouvelle Inscription</div>
         </a>
         <a href="/eleves" class="card">
             <div class="icon-circle bg-blue">👥</div>
-            <div class="card-title">Répertoire & Suivi</div>
+            <div class="card-title">Répertoire Élèves</div>
         </a>
         <a href="/paiements" class="card">
             <div class="icon-circle bg-purple">💳</div>
             <div class="card-title">Perception Frais</div>
         </a>
-        <a href="/historique" class="card">
-            <div class="icon-circle bg-orange">📋</div>
-            <div class="card-title">Historique Caisse</div>
-        </a>
     </div>
+
+    <!-- NOUVEAU BLOC EXPORT COMPTABILITÉ -->
+    <div class="export-box">
+        <h3 style="margin-bottom: 10px; font-size: 16px; color: #1e3a8a;">📊 Rapports Comptables Indépendants</h3>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Téléchargez les journaux de caisse au format Excel pour chaque catégorie :</p>
+        <a href="/download/inscription" class="btn-export" style="background: #16a34a;">📥 Inscriptions</a>
+        <a href="/download/minerval" class="btn-export" style="background: #2563eb;">📥 Minervaux & Trimestres</a>
+        <a href="/download/technique" class="btn-export" style="background: #9333ea;">📥 Frais Techniques & Connexes</a>
+    </div>
+
 </div>
 </body>
 </html>
