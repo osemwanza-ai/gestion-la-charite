@@ -4,41 +4,107 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Complexe Scolaire La Charité - Tableau de Bord</title>
+    <!-- CSS Bootstrap via CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { 
+            background-color: #f4f6f9; 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+        }
+        .card-custom {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e3e6f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card-blue {
+            border-left: 6px solid #0d6efd;
+        }
+        .stat-card-green {
+            border-left: 6px solid #198754;
+        }
+        .card-menu {
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            color: #333;
+            display: block;
+        }
+        .card-menu:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            color: #0d6efd;
+        }
+        .menu-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container py-4">
+    <!-- En-tête -->
+    <div class="text-center mb-4">
+        <h1 class="fw-bold text-primary">Complexe Scolaire La Charité</h1>
+        <p class="text-muted fs-5">Système de Gestion Scolaire & Financière</p>
+    </div>
+
+    <!-- Messages Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+             {{ message }}
+             <button type="button" class="btn-close" data-bs-Le rendu visuel actuel montre deux anomalies majeures :
+* **Bootstrap et Font Awesome ne se chargent pas :** Le style brut (liens bleus/violets, cartes déformées avec de grosses parenthèses sombres sur le côté) indique que votre navigateur ne parvient pas à télécharger les fichiers CSS depuis le CDN externe (connexion internet coupée, blocage réseau ou CDN inaccessible).
+* **Le code HTML s'est interrompu :** La réponse précédente a été coupée net au milieu de l'instruction `<button type="button" class="btn-close" data-bs-dismiss="...`, ce qui a produit une balise mal fermée et cassé toute la structure de la page.
+
+Voici le code HTML réécrit, propre, autonome et structuré pour corriger définitivement le rendu.
+
+### Fichier : `templates/dashboard.html`
+
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complexe Scolaire La Charité - Tableau de Bord</title>
     <link href="[https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css](https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css)" rel="stylesheet">
     <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
     <style>
-        body { background-color: #f4f6f9; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-        .card-menu { transition: all 0.25s ease-in-out; border: none; border-radius: 14px; cursor: pointer; }
-        .card-menu:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.08) !important; }
-        .stat-card { border-left: 6px solid; border-radius: 12px; }
-        .icon-circle { width: 54px; height: 54px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
-        .badge-pill { padding: 8px 14px; border-radius: 50rem; font-weight: 600; }
-        .style-btn-purple { background-color: #8e44ad; color: white; border: none; }
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card-menu { transition: transform 0.2s, box-shadow 0.2s; border: none; border-radius: 12px; }
+        .card-menu:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .stat-card { border-left: 5px solid; border-radius: 10px; }
+        .style-btn-purple { background-color: #8e44ad; color: white; }
         .style-btn-purple:hover { background-color: #732d91; color: white; }
     </style>
 </head>
 <body>
 
 <div class="container py-4">
-    <!-- En-tête principal -->
+    <!-- En-tête -->
     <div class="text-center mb-4">
-        <h1 class="fw-bold text-primary display-6">Complexe Scolaire La Charité</h1>
-        <p class="text-muted fs-6">Système de Gestion Scolaire & Financière</p>
+        <h1 class="fw-bold text-primary">Complexe Scolaire La Charité</h1>
+        <p class="text-muted fs-5">Système de Gestion Scolaire & Financière</p>
     </div>
 
-    <!-- Alertes de messages (Flash) -->
+    <!-- Notifications Flash -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
              {{ message }}
-             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
           </div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
-    <!-- Cartes des statistiques globales -->
+    <!-- Indicateurs clés -->
     <div class="row g-3 mb-4">
         <div class="col-md-6">
             <div class="card stat-card border-primary bg-white shadow-sm p-3">
@@ -46,10 +112,10 @@
                     <div>
                         <span class="text-muted fw-bold text-uppercase small">Élèves Inscrits</span>
                         <h2 class="fw-bold my-1 text-primary">{{ total_eleves }}</h2>
-                        <small class="text-muted">Total des effectifs enregistrés dans le système</small>
+                        <small class="text-muted">Total des effectifs enregistrés</small>
                     </div>
-                    <div class="icon-circle bg-primary-subtle text-primary">
-                        <i class="fa-solid fa-user-graduate fa-xl"></i>
+                    <div class="bg-primary-subtle p-3 rounded-circle text-primary">
+                        <i class="fa-solid fa-user-graduate fa-2x"></i>
                     </div>
                 </div>
             </div>
@@ -60,71 +126,55 @@
                     <div>
                         <span class="text-muted fw-bold text-uppercase small">Recettes Totales</span>
                         <h2 class="fw-bold my-1 text-success">{{ "{:,.0f}".format(total_recettes) }} FC</h2>
-                        <small class="text-muted">Cumul des inscriptions et paiements de frais</small>
+                        <small class="text-muted">Cumul des frais perçus</small>
                     </div>
-                    <div class="icon-circle bg-success-subtle text-success">
-                        <i class="fa-solid fa-wallet fa-xl"></i>
+                    <div class="bg-success-subtle p-3 rounded-circle text-success">
+                        <i class="fa-solid fa-wallet fa-2x"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Navigation principale (Boutons d'accès) -->
+    <!-- Menu rapide -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <a href="{{ url_for('admin') }}" class="text-decoration-none">
-                <div class="card card-menu bg-white p-4 text-center shadow-sm h-100">
-                    <div class="mb-3">
-                        <span class="icon-circle bg-warning-subtle text-warning mx-auto">
-                            <i class="fa-solid fa-gear fa-xl"></i>
-                        </span>
-                    </div>
+                <div class="card card-menu bg-white p-3 text-center shadow-sm h-100">
+                    <div class="my-2"><i class="fa-solid fa-gear fa-2x text-warning"></i></div>
                     <h6 class="fw-bold text-dark m-0">Configuration Admin</h6>
                 </div>
             </a>
         </div>
         <div class="col-md-3">
             <a href="{{ url_for('inscription') }}" class="text-decoration-none">
-                <div class="card card-menu bg-white p-4 text-center shadow-sm h-100">
-                    <div class="mb-3">
-                        <span class="icon-circle bg-success-subtle text-success mx-auto">
-                            <i class="fa-solid fa-pen-to-square fa-xl"></i>
-                        </span>
-                    </div>
+                <div class="card card-menu bg-white p-3 text-center shadow-sm h-100">
+                    <div class="my-2"><i class="fa-solid fa-pen-to-square fa-2x text-success"></i></div>
                     <h6 class="fw-bold text-dark m-0">Nouvelle Inscription</h6>
                 </div>
             </a>
         </div>
         <div class="col-md-3">
             <a href="{{ url_for('liste_eleves') }}" class="text-decoration-none">
-                <div class="card card-menu bg-white p-4 text-center shadow-sm h-100">
-                    <div class="mb-3">
-                        <span class="icon-circle bg-primary-subtle text-primary mx-auto">
-                            <i class="fa-solid fa-users fa-xl"></i>
-                        </span>
-                    </div>
+                <div class="card card-menu bg-white p-3 text-center shadow-sm h-100">
+                    <div class="my-2"><i class="fa-solid fa-users fa-2x text-primary"></i></div>
                     <h6 class="fw-bold text-dark m-0">Répertoire Élèves</h6>
                 </div>
             </a>
         </div>
         <div class="col-md-3">
             <a href="{{ url_for('paiement') }}" class="text-decoration-none">
-                <div class="card card-menu bg-white p-4 text-center shadow-sm h-100">
-                    <div class="mb-3">
-                        <span class="icon-circle bg-info-subtle text-info mx-auto">
-                            <i class="fa-solid fa-credit-card fa-xl"></i>
-                        </span>
-                    </div>
+                <div class="card card-menu bg-white p-3 text-center shadow-sm h-100">
+                    <div class="my-2"><i class="fa-solid fa-credit-card fa-2x text-info"></i></div>
                     <h6 class="fw-bold text-dark m-0">Perception Frais</h6>
                 </div>
             </a>
         </div>
     </div>
 
-    <!-- Tableau détaillé du recouvrement par trimestre -->
+    <!-- Statistiques trimestrielles -->
     <div class="card border-0 shadow-sm rounded-3 mb-4">
-        <div class="card-header bg-white py-3 border-0">
+        <div class="card-header bg-white py-3">
             <h5 class="fw-bold text-dark m-0"><i class="fa-solid fa-chart-pie text-primary me-2"></i>Statistiques de Recouvrement par Trimestre</h5>
         </div>
         <div class="card-body p-0">
@@ -132,31 +182,31 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-4">Période / Trimestre</th>
+                            <th class="ps-3">Trimestre</th>
                             <th class="text-center">Élèves en règle (Minerval)</th>
-                            <th class="text-center">Élèves en règle (Frais Techniques/Connexes)</th>
-                            <th class="text-center pe-4">Effectif Inscrit</th>
+                            <th class="text-center">Élèves en règle (Techniques)</th>
+                            <th class="text-center">Total Inscrit</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for trim, data in stats_trimestres.items() %}
                         <tr>
-                            <td class="ps-4 fw-bold text-secondary">{{ trim }}</td>
+                            <td class="ps-3 fw-bold text-secondary">{{ trim }}</td>
                             <td class="text-center">
-                                <span class="badge bg-success-subtle text-success badge-pill fs-6">
+                                <span class="badge bg-success-subtle text-success px-3 py-2 fs-6 rounded-pill">
                                     {{ data.minerval }} / {{ total_eleves }}
                                 </span>
                             </td>
                             <td class="text-center">
-                                <span class="badge bg-info-subtle text-info badge-pill fs-6">
+                                <span class="badge bg-info-subtle text-info px-3 py-2 fs-6 rounded-pill">
                                     {{ data.technique }} / {{ total_eleves }}
                                 </span>
                             </td>
-                            <td class="text-center pe-4 fw-bold">{{ total_eleves }}</td>
+                            <td class="text-center fw-bold">{{ total_eleves }}</td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="4" class="text-center text-muted py-4">Aucune donnée disponible pour le moment.</td>
+                            <td colspan="4" class="text-center text-muted py-3">Aucune statistique disponible</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -165,18 +215,17 @@
         </div>
     </div>
 
-    <!-- Téléchargement des rapports -->
-    <div class="card border-0 shadow-sm rounded-3 p-4">
-        <h6 class="fw-bold text-dark mb-1"><i class="fa-solid fa-file-excel text-success me-2"></i>Rapports Comptables Indépendants</h6>
-        <p class="text-muted small mb-3">Téléchargez les journaux de caisse au format Excel/CSV pour chaque catégorie :</p>
+    <!-- Rapports -->
+    <div class="card border-0 shadow-sm rounded-3 p-3">
+        <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-file-excel text-success me-2"></i>Rapports Comptables Indépendants</h6>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="{{ url_for('download_rapport', type_rapport='inscription') }}" class="btn btn-success btn-sm px-3"><i class="fa-solid fa-download me-1"></i> Inscriptions</a>
-            <a href="{{ url_for('download_rapport', type_rapport='minerval') }}" class="btn btn-primary btn-sm px-3"><i class="fa-solid fa-download me-1"></i> Minervaux & Trimestres</a>
-            <a href="{{ url_for('download_rapport', type_rapport='technique') }}" class="btn style-btn-purple btn-sm px-3"><i class="fa-solid fa-download me-1"></i> Frais Techniques & Connexes</a>
+            <a href="{{ url_for('download_rapport', type_rapport='inscription') }}" class="btn btn-success btn-sm"><i class="fa-solid fa-download me-1"></i> Inscriptions</a>
+            <a href="{{ url_for('download_rapport', type_rapport='minerval') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-download me-1"></i> Minervaux</a>
+            <a href="{{ url_for('download_rapport', type_rapport='technique') }}" class="btn style-btn-purple btn-sm"><i class="fa-solid fa-download me-1"></i> Frais Techniques</a>
         </div>
     </div>
 </div>
 
-<script href="[https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js](https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js)"></script>
+<script src="[https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js](https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js)"></script>
 </body>
 </html>
