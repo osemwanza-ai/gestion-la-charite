@@ -91,10 +91,6 @@ def liste_eleves():
     eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
     return render_template('eleves.html', eleves=eleves)
 
-@app.route('/admin')
-def admin():
-    return render_template('admin.html')
-
 @app.route('/paiements')
 def paiements():
     paiements_liste = Paiement.query.order_by(Paiement.date_paiement.desc()).all()
@@ -134,8 +130,9 @@ def inscription():
 
     return render_template('inscription.html', frais=frais)
 
+@app.route('/admin', methods=['GET', 'POST'])
 @app.route('/frais', methods=['GET', 'POST'])
-def frais():
+def admin():
     if request.method == 'POST':
         action = request.form.get('action')
         
@@ -170,7 +167,7 @@ def frais():
             db.session.commit()
             flash("✅ Rubrique de frais enregistrée avec succès.", "success")
 
-        return redirect(url_for('frais'))
+        return redirect(url_for('admin'))
 
     try:
         frais_inscription = FraisInscription.query.first()
@@ -179,7 +176,7 @@ def frais():
         frais_inscription = None
         rubriques = []
         
-    return render_template('frais.html', frais_inscription=frais_inscription, rubriques=rubriques)
+    return render_template('admin.html', frais_inscription=frais_inscription, rubriques=rubriques)
 
 @app.route('/payer/<int:eleve_id>', methods=['GET', 'POST'])
 def payer(eleve_id):
