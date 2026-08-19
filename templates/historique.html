@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historique des Paiements - C.S. La Charité</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f8fafc; color: #1e293b; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        h2 { text-align: center; color: #1e293b; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 20px; }
+        .actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .btn { padding: 10px 16px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-home { background: #f1f5f9; color: #475569; }
+        .btn-excel { background: #16a34a; color: white; }
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; font-size: 14px; }
+        th { background-color: #2563eb; color: white; }
+        tr:nth-child(even) { background-color: #f8fafc; }
+        .empty-row { text-align: center; color: #94a3b8; padding: 20px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>COMPLEXE SCOLAIRE LA CHARITÉ</h2>
+    <p class="subtitle">Historique Général des Paiements Enregistrés</p>
+    
+    <div class="actions">
+        <a href="/" class="btn btn-home">⬅️ Tableau de bord</a>
+        <a href="/download" class="btn btn-excel">📊 Télécharger tout en Excel</a>
+    </div>
+
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>N°</th>
+                    <th>Date & Heure</th>
+                    <th>Nom de l'Élève</th>
+                    <th>Classe</th>
+                    <th>Motif</th>
+                    <th>Montant</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in paiements %}
+                <tr>
+                    <td>{{ p.id }}</td>
+                    <td>{{ p.date_heure }}</td>
+                    <td>{{ p.nom_eleve }}</td>
+                    <td>{{ p.classe }}</td>
+                    <td>{{ p.type_frais }}</td>
+                    <td><strong>{{ p.montant }} FC</strong></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="empty-row">Aucun paiement enregistré dans la base de données.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
