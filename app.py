@@ -58,42 +58,37 @@ class Paiement(db.Model):
     date_paiement = db.Column(db.DateTime, default=datetime.utcnow)
     rubrique = db.relationship('RubriqueFrais')
 
-# --- 4. INITIALISATION SÉCURISÉE AU DÉMARRAGE ---
+# --- 4. INITIALISATION DE LA BASE ---
 with app.app_context():
     try:
         db.create_all()
     except Exception as e:
-        print(f"Erreur initialisation DB : {e}")
+        print(f"Erreur DB : {e}")
 
-# --- 5. ROUTES ET LOGIQUE METIER ---
+# --- 5. ROUTES DE L'APPLICATION ---
 
 @app.route('/init-db')
 def init_db():
-    """Route pour réinitialiser la structure de la base PostgreSQL et appliquer les nouvelles colonnes"""
     try:
-        db.drop_all()   # Supprime l'ancienne table obsolète qui posait problème
-        db.create_all() # Recree proprement la table avec nom_complet
-        return "✅ Base de données PostgreSQL réinitialisée avec succès avec la nouvelle structure ! <br><br><a href='/'>Aller à l'accueil</a>"
+        db.drop_all()
+        db.create_all()
+        return "✅ Base de données réinitialisée avec succès ! <br><br><a href='/'>Retour à l'accueil</a>"
     except Exception as e:
-        return f"❌ Erreur lors de la réinitialisation : {str(e)}"
+        return f"❌ Erreur : {str(e)}"
 
 @app.route('/')
 def index():
     try:
         eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
-        return render_template('index.html', eleves=eleves)
+        # On charge dashboard.html au lieu de index.html
+        return render_template('dashboard.html', eleves=eleves)
     except Exception as e:
-        return f"""
-        <div style="padding: 30px; font-family: sans-serif;">
-            <h2 style="color: #dc2626;">⚠️ La base de données nécessite une mise à jour</h2>
-            <p><strong>Raison :</strong> Les colonnes de la base ne correspondent pas au code actuel.</p>
-            <p><strong>Détail :</strong> {str(e)}</p>
-            <br>
-            <a href="/init-db" style="padding: 12px 24px; background: #16a34a; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                👉 Cliquez ici pour corriger et réinitialiser les tables PostgreSQL
-            </a>
-        </div>
-        """
+        return render_template('dashboard.html', eleves=[])
+
+@app.route('/eleves')
+def liste_eleves():
+    eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
+    return render_template('eleves.html', eleves=eleves)
 
 @app.route('/inscription', methods=['GET', 'POST'])
 def inscription():
@@ -143,7 +138,7 @@ def frais():
                 frais_obj = FraisInscription(montant=montant)
                 db.session.add(frais_obj)
             db.session.commit()
-            flash("Frais d'inscription mis à jour avec succès.", "success")
+            flash("Frais d'inscription mis à jour.", "success")
             
         elif action == 'ajouter_rubrique':
             nom = request.form.get('nom')
@@ -186,6 +181,7 @@ def payer(eleve_id):
         total_deja_paye = sum(p.montant for p in paiements_existants)
         reste_a_payer = montant_fixe - total_deja_paye
 
+        # Restrictions et plafonnement
         if reste_a_payer <= 0:
             flash(f"⚠️ Le solde pour {rubrique.nom} ({trimestre}) est déjà totalement apuré (0 FC restant).", "danger")
             return redirect(url_for('payer', eleve_id=eleve.id))
@@ -204,7 +200,7 @@ def payer(eleve_id):
         db.session.add(nouveau_paiement)
         db.session.commit()
 
-        flash(f"✅ Paiement de {montant_verse:,.0f} FC enregistré. Reste à payer : {reste_a_payer - montant_verse:,.0f} FC.", "success")
+        flash(f"✅ Paiement de {montant_verse:,.0f} FC enregistré.", "success")
         return redirect(url_for('index'))
 
     return render_template('payer.html', eleve=eleve, rubriques=rubriques)
