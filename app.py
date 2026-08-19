@@ -24,9 +24,10 @@ db = SQLAlchemy(app)
 # Modèles de base de données
 class Eleve(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    nom = db.Column(db.String(100), nullable=False)
+    nom_complet = db.Column(db.String(100), nullable=False)
     classe = db.Column(db.String(50), nullable=False)
     matricule = db.Column(db.String(50), unique=True, nullable=False)
+    telephone_tuteur = db.Column(db.String(20), nullable=True)
 
 class Paiement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -47,10 +48,36 @@ def dashboard():
     total_recettes = sum(p.montant for p in paiements)
     return render_template('dashboard.html', total_eleves=total_eleves, total_recettes=total_recettes)
 
+# Module Inscriptions & Liste Élèves
+@app.route('/eleves', methods=['GET', 'POST'])
+def eleves():
+    if request.method == 'POST':
+        nom = request.form.get('nom_complet')
+        classe = request.form.get('classe')
+        telephone = request.form.get('telephone_tuteur')
+        
+        # Génération automatique d'un matricule
+        count = Eleve.query.count() + 1
+        matricule = f"CHAR-{datetime.now().year}-{count:03d}"
+
+        nouvel_eleve = Eleve(
+            nom_complet=nom,
+            classe=classe,
+            matricule=matricule,
+            telephone_tuteur=telephone
+        )
+        db.session.add(nouvel_eleve)
+        db.session.commit()
+        return redirect(url_for('eleves'))
+
+    liste_eleves = Eleve.query.order_by(Eleve.id.desc()).all()
+    return render_template('eleves.html', eleves=liste_eleves)
+
 # Module Paiements
 @app.route('/paiements', methods=['GET', 'POST'])
 def paiements():
     donnees_recu = None
+    eleves_liste = Eleve.query.all()
     if request.method == 'POST':
         nom = request.form.get('nom_eleve')
         classe = request.form.get('classe')
@@ -76,7 +103,7 @@ def paiements():
             'date_heure': date_heure
         }
 
-    return render_template('paiements.html', recu=donnees_recu)
+    return render_template('paiements.html', recu=donnees_recu, eleves=eleves_liste)
 
 # Module Historique
 @app.route('/historique')
