@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
+import io
 
 # --- 1. INITIALISATION DE L'APPLICATION ---
 app = Flask(__name__)
@@ -196,7 +197,7 @@ def admin():
         
     return render_template('admin.html', frais_inscription=frais_inscription, rubriques=rubriques)
 
-# ROUTE DE PAIEMENT - Pointe vers paiement.html
+# ROUTE PERCEPTION DES FRAIS
 @app.route('/paiement', methods=['GET', 'POST'])
 @app.route('/paiement/<int:eleve_id>', methods=['GET', 'POST'])
 @app.route('/payer', methods=['GET', 'POST'])
@@ -207,7 +208,6 @@ def paiement(eleve_id=None):
     rubriques = RubriqueFrais.query.all()
     
     if request.method == 'POST':
-        # Si la sélection de l'élève vient de changer dans le menu déroulant
         selected_id = request.form.get('eleve_id')
         if selected_id and not request.form.get('rubrique_id'):
             return redirect(url_for('paiement', eleve_id=selected_id))
@@ -252,7 +252,7 @@ def paiement(eleve_id=None):
 
     return render_template('paiement.html', eleve=eleve_selectionne, eleves=eleves, rubriques=rubriques)
 
-# ROUTE POUR LES RAPPORTS COMPTABLES
+# ROUTE AFFICHAGE DES RAPPORTS COMPTABLES
 @app.route('/rapports')
 def rapports():
     type_rapport = request.args.get('type', 'tous')
@@ -260,13 +260,44 @@ def rapports():
 
     if type_rapport == 'minerval':
         query = query.join(RubriqueFrais).filter(RubriqueFrais.nom.ilike('%minerval%'))
-    elif type_rapport == 'connexes':
+    elif type_rapport == 'connexes' or type_rapport == 'technique':
         query = query.join(RubriqueFrais).filter(~RubriqueFrais.nom.ilike('%minerval%'), ~RubriqueFrais.nom.ilike('%inscription%'))
 
     paiements_filtrés = query.order_by(Paiement.date_paiement.desc()).all()
     total_encaisse = sum(p.montant for p in paiements_filtrés)
 
     return render_template('rapports.html', paiements=paiements_filtrés, total=total_encaisse, type_actuel=type_rapport)
+
+# ROUTE TÉLÉCHARGEMENT EXPORTATION EXCEL/CSV (Résout l'erreur 404)
+@app.route('/download/<type_rapport>')
+def download_rapport(type_rapport):
+    try:
+        output = io.StringIO()
+        output.write("Matricule;Nom Complet;Rubrique;Trimestre;Montant (FC);Date\n")
+
+        query = Paiement.query
+        if type_rapport in ['technique', 'connexes']:
+            query = query.join(RubriqueFrais).filter(~RubriqueFrais.nom.ilike('%minerval%'), ~RubriqueFrais.nom.ilike('%inscription%'))
+        elif type_rapport == 'minerval':
+            query = query.join(RubriqueFrais).filter(RubriqueFrais.nom.ilike('%minerval%'))
+
+        paiements = query.all()
+        for p in paiements:
+            output.write(f"{p.eleve.matricule};{p.eleve.nom_complet};{p.rubrique.nom};{p.trimestre};{p.montant};{p.date_paiement.strftime('%d/%m/%Y')}\n")
+
+        mem = io.BytesIO()
+        mem.write(output.getvalue().encode('utf-8-sig'))
+        mem.seek(0)
+
+        return send_file(
+            mem,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=f'rapport_{type_rapport}.csv'
+        )
+    except Exception as e:
+        flash(f"⚠️ Erreur lors de la génération du fichier : {str(e)}", "danger")
+        return redirect(url_for('rapports'))
 
 if __name__ == '__main__':
     app.run(debug=True)
