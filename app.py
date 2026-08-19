@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
@@ -6,7 +6,7 @@ import io
 
 # --- 1. INITIALISATION DE L'APPLICATION ---
 app = Flask(__name__)
-app.secret_key = "cle_secrete_complexe_la_charite"
+app.secret_key = os.environ.get("SECRET_KEY", "cle_secrete_complexe_la_charite")
 
 # --- 2. CONFIGURATION DE LA BASE DE DONNÉES ---
 DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -59,6 +59,7 @@ class Paiement(db.Model):
     rubrique_id = db.Column(db.Integer, db.ForeignKey('rubrique_frais.id'), nullable=False)
     trimestre = db.Column(db.String(50), nullable=False)
     montant = db.Column(db.Float, nullable=False)
+    mode_paiement = db.Column(db.String(50), default="Espèces")
     date_paiement = db.Column(db.DateTime, default=datetime.utcnow)
     rubrique = db.relationship('RubriqueFrais')
 
@@ -93,7 +94,6 @@ def liste_eleves():
     eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
     return render_template('eleves.html', eleves=eleves)
 
-# ROUTE DÉTAILS ÉLÈVE (Pour afficher la fiche complète d'un élève)
 @app.route('/eleve/<int:eleve_id>')
 def details_eleve(eleve_id):
     eleve = Eleve.query.get_or_404(eleve_id)
@@ -178,7 +178,6 @@ def admin():
         elif action == 'modifier_rubrique':
             rubrique_id = request.form.get('rubrique_id')
             rubrique = RubriqueFrais.query.get_or_404(rubrique_id)
-            
             rubrique.nom = request.form.get('nom')
             rubrique.montant = float(request.form.get('montant'))
             db.session.commit()
@@ -202,7 +201,8 @@ def admin():
         
     return render_template('admin.html', frais_inscription=frais_inscription, rubriques=rubriques)
 
-# ROUTE PERCEPTION DES FRAIS (Ajout des routes au pluriel '/paiements' pour corriger la 404)
+# --- 6. ROUTE DES PAIEMENTS SÉCURISÉE ---
+
 @app.route('/paiement', methods=['GET', 'POST'])
 @app.route('/paiements', methods=['GET', 'POST'])
 @app.route('/paiement/<int:eleve_id>', methods=['GET', 'POST'])
@@ -210,58 +210,86 @@ def admin():
 @app.route('/payer', methods=['GET', 'POST'])
 @app.route('/payer/<int:eleve_id>', methods=['GET', 'POST'])
 def paiement(eleve_id=None):
-    eleves = Eleve.query.order_by(Eleve.nom_complet.asc()).all()
-    eleve_selectionne = Eleve.query.get(eleve_id) if eleve_id else None
-    rubriques = RubriqueFrais.query.all()
-    
-    if request.method == 'POST':
-        selected_id = request.form.get('eleve_id')
+    try:
+        eleves = Eleve.query.order_by(Eleve.nom_complet.asc()).all()
+        eleve_selectionne = Eleve.query.get(eleve_id) if eleve_id else None
+        rubriques = RubriqueFrais.query.all()
         
-        # Si l'utilisateur vient juste de choisir un élève dans la liste déroulante
-        if selected_id and not request.form.get('rubrique_id'):
-            return redirect(url_for('paiement', eleve_id=selected_id))
-
+        historique_paiements = []
+        restes_par_rubrique = {}
+        
         if eleve_selectionne:
-            rubrique_id = request.form.get('rubrique_id')
-            trimestre = request.form.get('trimestre')
-            montant_verse = float(request.form.get('montant'))
-            
-            rubrique = RubriqueFrais.query.get(rubrique_id)
-            montant_fixe = rubrique.montant
+            historique_paiements = Paiement.query.filter_by(eleve_id=eleve_selectionne.id).order_by(Paiement.date_paiement.desc()).all()
+            for r in rubriques:
+                restes_par_rubrique[r.id] = {}
+                for t in ['1er Trimestre', '2ème Trimestre', '3ème Trimestre']:
+                    deja_paye = sum(p.montant for p in historique_paiements if p.rubrique_id == r.id and p.trimestre == t)
+                    restes_par_rubrique[r.id][t] = max(0.0, r.montant - deja_paye)
 
-            paiements_existants = Paiement.query.filter_by(
-                eleve_id=eleve_selectionne.id, 
-                rubrique_id=rubrique_id, 
-                trimestre=trimestre
-            ).all()
-            
-            total_deja_paye = sum(p.montant for p in paiements_existants)
-            reste_a_payer = montant_fixe - total_deja_paye
+        if request.method == 'POST':
+            selected_id = request.form.get('eleve_id')
+            if selected_id and not request.form.get('rubrique_id'):
+                return redirect(url_for('paiement', eleve_id=selected_id))
 
-            if reste_a_payer <= 0:
-                flash(f"⚠️ Le solde pour {rubrique.nom} ({trimestre}) est déjà apuré.", "danger")
+            if eleve_selectionne:
+                rubrique_id = request.form.get('rubrique_id')
+                trimestre = request.form.get('trimestre')
+                montant_verse = float(request.form.get('montant', 0))
+                mode_p = request.form.get('mode_paiement', 'Espèces')
+                
+                rubrique = RubriqueFrais.query.get(rubrique_id)
+                montant_fixe = rubrique.montant
+
+                paiements_existants = Paiement.query.filter_by(
+                    eleve_id=eleve_selectionne.id, 
+                    rubrique_id=rubrique_id, 
+                    trimestre=trimestre
+                ).all()
+                
+                total_deja_paye = sum(p.montant for p in paiements_existants)
+                reste_a_payer = montant_fixe - total_deja_paye
+
+                if reste_a_payer <= 0:
+                    flash(f"⚠️ Le solde pour {rubrique.nom} ({trimestre}) est déjà totalement apuré.", "danger")
+                    return redirect(url_for('paiement', eleve_id=eleve_selectionne.id))
+
+                if montant_verse <= 0:
+                    flash("⚠️ Veuillez saisir un montant valide à payer.", "warning")
+                    return redirect(url_for('paiement', eleve_id=eleve_selectionne.id))
+
+                if montant_verse > reste_a_payer:
+                    flash(f"⚠️ Le montant saisi ({montant_verse:,.0f} FC) dépasse le reste à payer ({reste_a_payer:,.0f} FC).", "warning")
+                    return redirect(url_for('paiement', eleve_id=eleve_selectionne.id))
+
+                nouveau_paiement = Paiement(
+                    eleve_id=eleve_selectionne.id,
+                    rubrique_id=rubrique_id,
+                    trimestre=trimestre,
+                    montant=montant_verse,
+                    mode_paiement=mode_p,
+                    date_paiement=datetime.now()
+                )
+                db.session.add(nouveau_paiement)
+                db.session.commit()
+
+                flash(f"✅ Paiement de {montant_verse:,.0f} FC enregistré avec succès.", "success")
                 return redirect(url_for('paiement', eleve_id=eleve_selectionne.id))
 
-            if montant_verse > reste_a_payer:
-                flash(f"⚠️ Le montant dépasse le solde du {trimestre} ({reste_a_payer:,.0f} FC restant).", "warning")
-                return redirect(url_for('paiement', eleve_id=eleve_selectionne.id))
+        return render_template(
+            'paiement.html', 
+            eleve=eleve_selectionne, 
+            eleves=eleves, 
+            rubriques=rubriques,
+            historique=historique_paiements,
+            restes=restes_par_rubrique
+        )
+    except Exception as e:
+        db.session.rollback()
+        flash(f"⚠️ Erreur système : {str(e)}", "danger")
+        return redirect(url_for('index'))
 
-            nouveau_paiement = Paiement(
-                eleve_id=eleve_selectionne.id,
-                rubrique_id=rubrique_id,
-                trimestre=trimestre,
-                montant=montant_verse,
-                date_paiement=datetime.now()
-            )
-            db.session.add(nouveau_paiement)
-            db.session.commit()
+# --- 7. RAPPORTS COMPTABLES ET EXPORTATION ---
 
-            flash(f"✅ Paiement de {montant_verse:,.0f} FC enregistré pour {eleve_selectionne.nom_complet}.", "success")
-            return redirect(url_for('rapports'))
-
-    return render_template('paiement.html', eleve=eleve_selectionne, eleves=eleves, rubriques=rubriques)
-
-# ROUTE RAPPORTS COMPTABLES
 @app.route('/rapports')
 def rapports():
     type_rapport = request.args.get('type', 'tous')
@@ -277,7 +305,6 @@ def rapports():
 
     return render_template('rapports.html', paiements=paiements_filtrés, total=total_encaisse, type_actuel=type_rapport)
 
-# ROUTE EXPORTATION EXCEL/CSV
 @app.route('/download/<type_rapport>')
 def download_rapport(type_rapport):
     try:
