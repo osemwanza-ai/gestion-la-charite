@@ -17,14 +17,18 @@ db = SQLAlchemy(app)
 
 class ConfigurationFrais(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    type_frais = db.Column(db.String(100), nullable=False)
+    type_frais = db.Column(db.String(100), nullable=False) # INSCRIPTION, MINERVAL, TECHNIQUE, CONNEXE
+    section = db.Column(db.String(50), nullable=False)    # Maternelle, Primaire, Secondaire, Humanités
+    option = db.Column(db.String(100), nullable=True)     # Ex: Coupe & Couture, Électricité, Général...
     montant = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(200), nullable=True)
 
 class Eleve(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nom_complet = db.Column(db.String(100), nullable=False)
+    section = db.Column(db.String(50), nullable=True)
     classe = db.Column(db.String(50), nullable=False)
+    option = db.Column(db.String(100), nullable=True)
     matricule = db.Column(db.String(50), unique=True, nullable=False)
     telephone_tuteur = db.Column(db.String(20), nullable=True)
     date_inscription = db.Column(db.String(50), nullable=False)
@@ -43,7 +47,7 @@ class Paiement(db.Model):
 with app.app_context():
     db.create_all()
 
-# --- ROUTES DE L'APPLICATION ---
+# --- ROUTES ---
 
 @app.route('/')
 def dashboard():
@@ -56,11 +60,15 @@ def dashboard():
 def admin():
     if request.method == 'POST':
         type_frais = request.form.get('type_frais')
+        section = request.form.get('section')
+        option = request.form.get('option', '')
         montant = float(request.form.get('montant', 0))
         description = request.form.get('description', '')
 
         nouveau_frais = ConfigurationFrais(
             type_frais=type_frais,
+            section=section,
+            option=option if section in ['Secondaire', 'Humanités'] else 'N/A',
             montant=montant,
             description=description
         )
@@ -77,10 +85,12 @@ def inscription():
     
     if request.method == 'POST':
         if not frais_inscription:
-            return "Erreur : Le frais d'inscription n'a pas encore été paramétré dans l'administration.", 400
+            return "Erreur : Le frais d'inscription n'a pas été configuré par l'administrateur.", 400
 
         nom = request.form.get('nom_complet')
+        section = request.form.get('section')
         classe = request.form.get('classe')
+        option = request.form.get('option', '')
         telephone = request.form.get('telephone_tuteur')
         date_actuelle = datetime.now().strftime("%d/%m/%Y %H:%M")
         
@@ -89,7 +99,9 @@ def inscription():
 
         nouvel_eleve = Eleve(
             nom_complet=nom,
+            section=section,
             classe=classe,
+            option=option,
             matricule=matricule,
             telephone_tuteur=telephone,
             date_inscription=date_actuelle
@@ -101,10 +113,10 @@ def inscription():
             date_heure=date_actuelle,
             eleve_id=nouvel_eleve.id,
             nom_eleve=nom,
-            classe=classe,
+            classe=f"{classe} ({section})",
             categorie_frais='INSCRIPTION',
             montant=frais_inscription.montant,
-            motif_detail="Frais d'inscription obligatoire"
+            motif_detail="Frais d'inscription"
         )
         db.session.add(paiement_ins)
         db.session.commit()
@@ -122,12 +134,9 @@ def paiements():
     if request.method == 'POST':
         eleve_id = request.form.get('eleve_id')
         if not eleve_id:
-            return "Erreur : Vous devez sélectionner un élève inscrit.", 400
+            return "Erreur : Veuillez sélectionner un élève inscrit.", 400
             
         eleve = Eleve.query.get(eleve_id)
-        if not eleve:
-            return "Erreur : Élève non trouvé dans la base.", 400
-
         categorie = request.form.get('categorie_frais')
         trimestre = request.form.get('trimestre')
         motif = request.form.get('motif_detail')
@@ -169,22 +178,22 @@ def download_rapport(type_rapport):
     ws = wb.active
 
     if type_rapport == 'inscription':
-        ws.title = "Frais d'Inscription"
-        ws.append(["N°", "Date & Heure", "Matricule", "Élève", "Classe", "Montant Payé"])
+        ws.title = "Inscriptions"
+        ws.append(["N°", "Date & Heure", "Matricule", "Élève", "Section / Classe", "Montant Payé"])
         paiements = Paiement.query.filter_by(categorie_frais='INSCRIPTION').all()
         for p in paiements:
             e = Eleve.query.get(p.eleve_id)
             ws.append([p.id, p.date_heure, e.matricule if e else '-', p.nom_eleve, p.classe, p.montant])
 
     elif type_rapport == 'minerval':
-        ws.title = "Frais de Minerval"
+        ws.title = "Minerval"
         ws.append(["N°", "Date & Heure", "Élève", "Classe", "Trimestre", "Montant Payé"])
         paiements = Paiement.query.filter_by(categorie_frais='MINERVAL').all()
         for p in paiements:
             ws.append([p.id, p.date_heure, p.nom_eleve, p.classe, p.trimestre, p.montant])
 
     elif type_rapport == 'technique':
-        ws.title = "Frais Techniques et Connexes"
+        ws.title = "Frais Techniques & Connexes"
         ws.append(["N°", "Date & Heure", "Élève", "Classe", "Catégorie", "Motif / Option", "Montant Payé"])
         paiements = Paiement.query.filter(Paiement.categorie_frais.in_(['TECHNIQUE', 'CONNEXE'])).all()
         for p in paiements:
