@@ -3,64 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LA CHARITÉ - Tableau de bord</title>
+    <title>Tableau de Bord - C.S. La Charité</title>
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
         body { background-color: #f8fafc; color: #1e293b; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-        .brand { font-size: 24px; font-weight: bold; color: #2563eb; }
-        .user-info { font-size: 14px; color: #64748b; margin-top: 4px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
-        .card { background: white; border-radius: 16px; padding: 20px; text-decoration: none; color: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: transform 0.2s; text-align: center; }
-        .card:active { transform: scale(0.98); }
-        .icon-circle { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 24px; }
-        .card-title { font-weight: 600; font-size: 15px; color: #334155; }
-        
-        /* Couleurs des icônes */
-        .bg-blue { background-color: #dbeafe; color: #2563eb; }
-        .bg-green { background-color: #dcfce7; color: #16a34a; }
-        .bg-orange { background-color: #ffedd5; color: #ea580c; }
-        .bg-red { background-color: #fee2e2; color: #dc2626; }
-        .bg-purple { background-color: #f3e8ff; color: #9333ea; }
-        .bg-teal { background-color: #ccfbf1; color: #0d9488; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: #1e3a8a; font-size: 26px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-left: 5px solid #2563eb; }
+        .stat-card h3 { font-size: 14px; color: #64748b; margin-bottom: 5px; }
+        .stat-card p { font-size: 22px; font-weight: bold; color: #0f172a; }
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
+        .card { background: white; padding: 20px; border-radius: 12px; text-decoration: none; color: #1e293b; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-center: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s; }
+        .card:hover { transform: translateY(-3px); }
+        .icon-circle { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 10px; }
+        .bg-blue { background: #dbeafe; color: #2563eb; }
+        .bg-green { background: #dcfce7; color: #16a34a; }
+        .bg-purple { background: #f3e8ff; color: #9333ea; }
+        .bg-orange { background: #ffedd5; color: #ea580c; }
     </style>
 </head>
 <body>
+<div class="container">
     <div class="header">
-        <div>
-            <div class="brand">C.S. LA CHARITÉ</div>
-            <div class="user-info">Bonjour, osée Mwanza (Administrateur)</div>
+        <h1>Complexe Scolaire La Charité</h1>
+        <p style="color: #64748b; font-size: 14px;">Système de Gestion Scolaire & Financière</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Élèves Inscrits</h3>
+            <p>{{ total_eleves }}</p>
+        </div>
+        <div class="stat-card" style="border-left-color: #16a34a;">
+            <h3>Recettes Totales</h3>
+            <p>{{ total_recettes }} FC</p>
         </div>
     </div>
 
-    <h2 style="margin-bottom: 15px; font-size: 18px;">Menu principal</h2>
-
-    <div class="grid">
-        <!-- Les cartes Élèves et Inscriptions pointent désormais vers /eleves -->
+    <div class="menu-grid">
+        <a href="/inscription" class="card">
+            <div class="icon-circle bg-green">✍️</div>
+            <div class="card-title">Nouvelle Inscription</div>
+        </a>
         <a href="/eleves" class="card">
             <div class="icon-circle bg-blue">👥</div>
-            <div class="card-title">Élèves ({{ total_eleves }})</div>
-        </a>
-        <a href="/eleves" class="card">
-            <div class="icon-circle bg-green">👤+</div>
-            <div class="card-title">Inscriptions</div>
+            <div class="card-title">Répertoire & Suivi</div>
         </a>
         <a href="/paiements" class="card">
-            <div class="icon-circle bg-orange">💳</div>
-            <div class="card-title">Paiements</div>
+            <div class="icon-circle bg-purple">💳</div>
+            <div class="card-title">Perception Frais</div>
         </a>
         <a href="/historique" class="card">
-            <div class="icon-circle bg-purple">📋</div>
-            <div class="card-title">Historique</div>
-        </a>
-        <a href="/download" class="card">
-            <div class="icon-circle bg-teal">📊</div>
-            <div class="card-title">Rapports Excel</div>
-        </a>
-        <a href="#" class="card">
-            <div class="icon-circle bg-red">📉</div>
-            <div class="card-title">Dépenses</div>
+            <div class="icon-circle bg-orange">📋</div>
+            <div class="card-title">Historique Caisse</div>
         </a>
     </div>
+</div>
 </body>
 </html>
