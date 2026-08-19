@@ -14,7 +14,7 @@
         .card { background: white; border-radius: 16px; padding: 20px; text-decoration: none; color: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: transform 0.2s; text-align: center; }
         .card:active { transform: scale(0.98); }
         .icon-circle { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 24px; }
-        .card-title { font-weight: 60px; font-size: 15px; color: #334155; }
+        .card-title { font-weight: 600; font-size: 15px; color: #334155; }
         
         /* Couleurs des icônes */
         .bg-blue { background-color: #dbeafe; color: #2563eb; }
@@ -36,11 +36,12 @@
     <h2 style="margin-bottom: 15px; font-size: 18px;">Menu principal</h2>
 
     <div class="grid">
-        <a href="#" class="card">
+        <!-- Les cartes Élèves et Inscriptions pointent désormais vers /eleves -->
+        <a href="/eleves" class="card">
             <div class="icon-circle bg-blue">👥</div>
             <div class="card-title">Élèves ({{ total_eleves }})</div>
         </a>
-        <a href="#" class="card">
+        <a href="/eleves" class="card">
             <div class="icon-circle bg-green">👤+</div>
             <div class="card-title">Inscriptions</div>
         </a>
