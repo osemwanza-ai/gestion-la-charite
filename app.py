@@ -85,9 +85,43 @@ def init_db():
 def index():
     try:
         eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
-        return render_template('dashboard.html', eleves=eleves)
+        total_eleves = len(eleves)
+        
+        paiements = Paiement.query.all()
+        total_recettes = sum(p.montant for p in paiements)
+        
+        trimestres = ['1er Trimestre', '2ème Trimestre', '3ème Trimestre']
+        stats_trimestres = {}
+
+        for t in trimestres:
+            payes_minerval = db.session.query(Paiement.eleve_id).join(RubriqueFrais)\
+                .filter(Paiement.trimestre == t, RubriqueFrais.nom.ilike('%minerval%'))\
+                .distinct().count()
+
+            payes_technique = db.session.query(Paiement.eleve_id).join(RubriqueFrais)\
+                .filter(Paiement.trimestre == t, ~RubriqueFrais.nom.ilike('%minerval%'), ~RubriqueFrais.nom.ilike('%inscription%'))\
+                .distinct().count()
+
+            stats_trimestres[t] = {
+                'minerval': payes_minerval,
+                'technique': payes_technique
+            }
+
+        return render_template(
+            'dashboard.html', 
+            eleves=eleves, 
+            total_eleves=total_eleves,
+            total_recettes=total_recettes,
+            stats_trimestres=stats_trimestres
+        )
     except Exception:
-        return render_template('dashboard.html', eleves=[])
+        return render_template(
+            'dashboard.html', 
+            eleves=[], 
+            total_eleves=0, 
+            total_recettes=0.0, 
+            stats_trimestres={}
+        )
 
 @app.route('/eleves')
 def liste_eleves():
@@ -201,8 +235,6 @@ def admin():
         
     return render_template('admin.html', frais_inscription=frais_inscription, rubriques=rubriques)
 
-# --- 6. ROUTE DES PAIEMENTS SÉCURISÉE ---
-
 @app.route('/paiement', methods=['GET', 'POST'])
 @app.route('/paiements', methods=['GET', 'POST'])
 @app.route('/paiement/<int:eleve_id>', methods=['GET', 'POST'])
@@ -287,8 +319,6 @@ def paiement(eleve_id=None):
         db.session.rollback()
         flash(f"⚠️ Erreur système : {str(e)}", "danger")
         return redirect(url_for('index'))
-
-# --- 7. RAPPORTS COMPTABLES ET EXPORTATION ---
 
 @app.route('/rapports')
 def rapports():
