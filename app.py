@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, send_file
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 import openpyxl
 from io import BytesIO
 from datetime import datetime
@@ -37,9 +38,13 @@ class Paiement(db.Model):
     type_frais = db.Column(db.String(50), nullable=False)
     montant = db.Column(db.Float, nullable=False)
 
-# Reconstitution propre de la base de données
+# Nettoyage forcé et récréation des tables
 with app.app_context():
-    db.drop_all()
+    try:
+        db.session.execute(text("DROP TABLE IF EXISTS eleve, paiement CASCADE;"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
     db.create_all()
 
 # Dashboard Principal
