@@ -150,7 +150,6 @@ def admin():
         elif action == 'ajouter_rubrique':
             nom = request.form.get('nom')
             montant = float(request.form.get('montant'))
-            
             sections_list = request.form.getlist('sections')
             options_list = request.form.getlist('options')
             
@@ -166,6 +165,31 @@ def admin():
             db.session.add(nouvelle_rubrique)
             db.session.commit()
             flash("✅ Rubrique de frais enregistrée avec succès.", "success")
+
+        elif action == 'modifier_rubrique':
+            rubrique_id = request.form.get('rubrique_id')
+            rubrique = RubriqueFrais.query.get_or_404(rubrique_id)
+            
+            rubrique.nom = request.form.get('nom')
+            rubrique.montant = float(request.form.get('montant'))
+            
+            sections_list = request.form.getlist('sections')
+            options_list = request.form.getlist('options')
+            
+            if sections_list:
+                rubrique.sections = ", ".join(sections_list)
+            if options_list:
+                rubrique.options = ", ".join(options_list)
+                
+            db.session.commit()
+            flash("✏️ Rubrique modifiée avec succès.", "info")
+
+        elif action == 'supprimer_rubrique':
+            rubrique_id = request.form.get('rubrique_id')
+            rubrique = RubriqueFrais.query.get_or_404(rubrique_id)
+            db.session.delete(rubrique)
+            db.session.commit()
+            flash("🗑️ Rubrique supprimée.", "warning")
 
         return redirect(url_for('admin'))
 
