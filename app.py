@@ -7,14 +7,14 @@ import os
 
 app = Flask(__name__)
 
-# Utilisation d'une base de données locale stable pour éviter les conflits PostgreSQL
+# Base de données SQLite locale auto-générée
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(BASE_DIR, 'charite_v2.db')}"
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(BASE_DIR, 'app_database.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Modèles
+# Modèle Élève
 class Eleve(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nom_complet = db.Column(db.String(100), nullable=False)
@@ -22,6 +22,7 @@ class Eleve(db.Model):
     matricule = db.Column(db.String(50), unique=True, nullable=False)
     telephone_tuteur = db.Column(db.String(20), nullable=True)
 
+# Modèle Paiement
 class Paiement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date_heure = db.Column(db.String(50), nullable=False)
@@ -30,11 +31,10 @@ class Paiement(db.Model):
     type_frais = db.Column(db.String(50), nullable=False)
     montant = db.Column(db.Float, nullable=False)
 
-# Création automatique des nouvelles tables
+# Création des tables au démarrage
 with app.app_context():
     db.create_all()
 
-# Dashboard Principal
 @app.route('/')
 def dashboard():
     total_eleves = Eleve.query.count()
@@ -42,7 +42,6 @@ def dashboard():
     total_recettes = sum(p.montant for p in paiements)
     return render_template('dashboard.html', total_eleves=total_eleves, total_recettes=total_recettes)
 
-# Module Inscriptions & Liste Élèves
 @app.route('/eleves', methods=['GET', 'POST'])
 def eleves():
     if request.method == 'POST':
@@ -66,7 +65,6 @@ def eleves():
     liste_eleves = Eleve.query.order_by(Eleve.id.desc()).all()
     return render_template('eleves.html', eleves=liste_eleves)
 
-# Module Paiements
 @app.route('/paiements', methods=['GET', 'POST'])
 def paiements():
     donnees_recu = None
@@ -98,13 +96,11 @@ def paiements():
 
     return render_template('paiements.html', recu=donnees_recu, eleves=eleves_liste)
 
-# Module Historique
 @app.route('/historique')
 def historique():
     liste = Paiement.query.order_by(Paiement.id.desc()).all()
     return render_template('historique.html', paiements=liste)
 
-# Export Excel
 @app.route('/download')
 def download():
     wb = openpyxl.Workbook()
