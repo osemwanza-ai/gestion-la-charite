@@ -3,76 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tableau de Bord - C.S. La Charité</title>
+    <title>Complexe Scolaire La Charité - Tableau de Bord</title>
+    <link href="[https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css](https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css)" rel="stylesheet">
+    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
-        body { background-color: #f8fafc; color: #1e293b; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .header h1 { color: #1e3a8a; font-size: 26px; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-left: 5px solid #2563eb; }
-        .stat-card h3 { font-size: 14px; color: #64748b; margin-bottom: 5px; }
-        .stat-card p { font-size: 22px; font-weight: bold; color: #0f172a; }
-        .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
-        .card { background: white; padding: 20px; border-radius: 12px; text-decoration: none; color: #1e293b; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s; }
-        .card:hover { transform: translateY(-3px); }
-        .icon-circle { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 10px; }
-        .bg-blue { background: #dbeafe; color: #2563eb; }
-        .bg-green { background: #dcfce7; color: #16a34a; }
-        .bg-purple { background: #f3e8ff; color: #9333ea; }
-        .bg-orange { background: #ffedd5; color: #ea580c; }
-        .bg-red { background: #fee2e2; color: #dc2626; }
-        .export-box { margin-top: 25px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .btn-export { display: inline-block; padding: 10px 15px; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 13px; margin-right: 8px; margin-top: 8px; }
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        .card-menu { transition: all 0.25s ease-in-out; border: none; border-radius: 14px; cursor: pointer; }
+        .card-menu:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.08) !important; }
+        .stat-card { border-left: 6px solid; border-radius: 12px; }
+        .icon-circle { width: 54px; height: 54px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .badge-pill { padding: 8px 14px; border-radius: 50rem; font-weight: 600; }
+        .style-btn-purple { background-color: #8e44ad; color: white; border: none; }
+        .style-btn-purple:hover { background-color: #732d91; color: white; }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="header">
-        <h1>Complexe Scolaire La Charité</h1>
-        <p style="color: #64748b; font-size: 14px;">Système de Gestion Scolaire & Financière</p>
+
+<div class="container py-4">
+    <!-- En-tête principal -->
+    <div class="text-center mb-4">
+        <h1 class="fw-bold text-primary display-6">Complexe Scolaire La Charité</h1>
+        <p class="text-muted fs-6">Système de Gestion Scolaire & Financière</p>
     </div>
 
-    <div class="stats-grid">
-        <div class="stat-card">
-            <h3>Élèves Inscrits</h3>
-            <p>{{ total_eleves }}</p>
+    <!-- Alertes de messages (Flash) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+             {{ message }}
+             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Cartes des statistiques globales -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card stat-card border-primary bg-white shadow-sm p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted fw-bold text-uppercase small">Élèves Inscrits</span>
+                        <h2 class="fw-bold my-1 text-primary">{{ total_eleves }}</h2>
+                        <small class="text-muted">Total des effectifs enregistrés dans le système</small>
+                    </div>
+                    <div class="icon-circle bg-primary-subtle text-primary">
+                        <i class="fa-solid fa-user-graduate fa-xl"></i>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="stat-card" style="border-left-color: #16a34a;">
-            <h3>Recettes Totales</h3>
-            <p>{{ total_recettes }} FC</p>
+        <div class="col-md-6">
+            <div class="card stat-card border-success bg-white shadow-sm p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted fw-bold text-uppercase small">Recettes Totales</span>
+                        <h2 class="fw-bold my-1 text-success">{{ "{:,.0f}".format(total_recettes) }} FC</h2>
+                        <small class="text-muted">Cumul des inscriptions et paiements de frais</small>
+                    </div>
+                    <div class="icon-circle bg-success-subtle text-success">
+                        <i class="fa-solid fa-wallet fa-xl"></i>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="menu-grid">
-        <a href="/admin" class="card">
-            <div class="icon-circle bg-red">⚙️</div>
-            <div class="card-title">Configuration Admin</div>
-        </a>
-        <a href="/inscription" class="card">
-            <div class="icon-circle bg-green">✍️</div>
-            <div class="card-title">Nouvelle Inscription</div>
-        </a>
-        <a href="/eleves" class="card">
-            <div class="icon-circle bg-blue">👥</div>
-            <div class="card-title">Répertoire Élèves</div>
-        </a>
-        <a href="/paiements" class="card">
-            <div class="icon-circle bg-purple">💳</div>
-            <div class="card-title">Perception Frais</div>
-        </a>
+    <!-- Navigation principale (Boutons d'accès) -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <a href="{{ url_for('admin') }}" class="text-decoration-none">
+                <div class="card card-menu bg-white p-4 text-center shadow-sm h-100">
+                    <div class="mb-3">
+                        <span class="icon-circle bg-warning-subtle text-warning mx-auto">
+                            <i class="fa-solid fa-gear fa-xl"></i>
+                        </span>
+                    </div>
+                    <h6 class="fw-bold text-dark m-0">Configuration Admin</h6>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('inscription') }}" class="text-decoration-none">
+                <div class="card card-menu bg-white p-4 text-center shadow-sm h-100">
+                    <div class="mb-3">
+                        <span class="icon-circle bg-success-subtle text-success mx-auto">
+                            <i class="fa-solid fa-pen-to-square fa-xl"></i>
+                        </span>
+                    </div>
+                    <h6 class="fw-bold text-dark m-0">Nouvelle Inscription</h6>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('liste_eleves') }}" class="text-decoration-none">
+                <div class="card card-menu bg-white p-4 text-center shadow-sm h-100">
+                    <div class="mb-3">
+                        <span class="icon-circle bg-primary-subtle text-primary mx-auto">
+                            <i class="fa-solid fa-users fa-xl"></i>
+                        </span>
+                    </div>
+                    <h6 class="fw-bold text-dark m-0">Répertoire Élèves</h6>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('paiement') }}" class="text-decoration-none">
+                <div class="card card-menu bg-white p-4 text-center shadow-sm h-100">
+                    <div class="mb-3">
+                        <span class="icon-circle bg-info-subtle text-info mx-auto">
+                            <i class="fa-solid fa-credit-card fa-xl"></i>
+                        </span>
+                    </div>
+                    <h6 class="fw-bold text-dark m-0">Perception Frais</h6>
+                </div>
+            </a>
+        </div>
     </div>
 
-    <!-- NOUVEAU BLOC EXPORT COMPTABILITÉ -->
-    <div class="export-box">
-        <h3 style="margin-bottom: 10px; font-size: 16px; color: #1e3a8a;">📊 Rapports Comptables Indépendants</h3>
-        <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Téléchargez les journaux de caisse au format Excel pour chaque catégorie :</p>
-        <a href="/download/inscription" class="btn-export" style="background: #16a34a;">📥 Inscriptions</a>
-        <a href="/download/minerval" class="btn-export" style="background: #2563eb;">📥 Minervaux & Trimestres</a>
-        <a href="/download/technique" class="btn-export" style="background: #9333ea;">📥 Frais Techniques & Connexes</a>
+    <!-- Tableau détaillé du recouvrement par trimestre -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-white py-3 border-0">
+            <h5 class="fw-bold text-dark m-0"><i class="fa-solid fa-chart-pie text-primary me-2"></i>Statistiques de Recouvrement par Trimestre</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Période / Trimestre</th>
+                            <th class="text-center">Élèves en règle (Minerval)</th>
+                            <th class="text-center">Élèves en règle (Frais Techniques/Connexes)</th>
+                            <th class="text-center pe-4">Effectif Inscrit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trim, data in stats_trimestres.items() %}
+                        <tr>
+                            <td class="ps-4 fw-bold text-secondary">{{ trim }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-success-subtle text-success badge-pill fs-6">
+                                    {{ data.minerval }} / {{ total_eleves }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info-subtle text-info badge-pill fs-6">
+                                    {{ data.technique }} / {{ total_eleves }}
+                                </span>
+                            </td>
+                            <td class="text-center pe-4 fw-bold">{{ total_eleves }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">Aucune donnée disponible pour le moment.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
+    <!-- Téléchargement des rapports -->
+    <div class="card border-0 shadow-sm rounded-3 p-4">
+        <h6 class="fw-bold text-dark mb-1"><i class="fa-solid fa-file-excel text-success me-2"></i>Rapports Comptables Indépendants</h6>
+        <p class="text-muted small mb-3">Téléchargez les journaux de caisse au format Excel/CSV pour chaque catégorie :</p>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('download_rapport', type_rapport='inscription') }}" class="btn btn-success btn-sm px-3"><i class="fa-solid fa-download me-1"></i> Inscriptions</a>
+            <a href="{{ url_for('download_rapport', type_rapport='minerval') }}" class="btn btn-primary btn-sm px-3"><i class="fa-solid fa-download me-1"></i> Minervaux & Trimestres</a>
+            <a href="{{ url_for('download_rapport', type_rapport='technique') }}" class="btn style-btn-purple btn-sm px-3"><i class="fa-solid fa-download me-1"></i> Frais Techniques & Connexes</a>
+        </div>
+    </div>
 </div>
+
+<script href="[https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js](https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js)"></script>
 </body>
 </html>
