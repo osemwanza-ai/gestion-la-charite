@@ -14,7 +14,6 @@
         <a href="/" class="btn btn-secondary">⬅️ Tableau de Bord</a>
     </div>
 
-    <!-- Messages Flash -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
@@ -38,8 +37,7 @@
                         <input type="hidden" name="action" value="frais_inscription">
                         <div class="mb-3">
                             <label class="form-label">Montant du frais d'inscription (FC)</label>
-                            <input type="number" name="montant" class="form-control" 
-                                   value="{{ frais_inscription.montant if frais_inscription else '' }}" required>
+                            <input type="number" name="montant" class="form-control" value="{{ frais_inscription.montant if frais_inscription else '' }}" required>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Enregistrer</button>
                     </form>
@@ -47,7 +45,7 @@
             </div>
         </div>
 
-        <!-- Configuration des Rubriques de Frais -->
+        <!-- Configuration des Rubriques -->
         <div class="col-md-7 mb-4">
             <div class="card shadow-sm">
                 <div class="card-header bg-dark text-white">
@@ -67,70 +65,29 @@
                             <input type="number" name="montant" class="form-control" placeholder="Ex: 45000" required>
                         </div>
 
-                        <!-- SECTIONS CONCERNÉES -->
                         <div class="mb-3">
                             <label class="form-label fw-bold">Sections concernées :</label>
                             <div class="border p-3 rounded bg-white">
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" id="check_toutes" name="sections" value="Toutes" onchange="toggleToutesSections(this)">
-                                    <label class="form-check-label fw-bold text-primary" for="check_toutes">
-                                        📌 Toutes les sections (Applicable à toute l'école)
-                                    </label>
+                                    <label class="form-check-label fw-bold text-primary" for="check_toutes">📌 Toutes les sections</label>
                                 </div>
                                 <hr>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input section-checkbox" type="checkbox" id="check_maternelle" name="sections" value="Maternelle" onchange="updateOptionsVisibility()">
-                                    <label class="form-check-label" for="check_maternelle">Maternelle</label>
+                                    <input class="form-check-input section-checkbox" type="checkbox" name="sections" value="Maternelle">
+                                    <label class="form-check-label">Maternelle</label>
                                 </div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input section-checkbox" type="checkbox" id="check_primaire" name="sections" value="Primaire" onchange="updateOptionsVisibility()">
-                                    <label class="form-check-label" for="check_primaire">Primaire</label>
+                                    <input class="form-check-input section-checkbox" type="checkbox" name="sections" value="Primaire">
+                                    <label class="form-check-label">Primaire</label>
                                 </div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input section-checkbox" type="checkbox" id="check_secondaire" name="sections" value="Secondaire" onchange="updateOptionsVisibility()">
-                                    <label class="form-check-label" for="check_secondaire">Secondaire / EB (7e-8e)</label>
+                                    <input class="form-check-input section-checkbox" type="checkbox" name="sections" value="Secondaire">
+                                    <label class="form-check-label">Secondaire / EB</label>
                                 </div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input section-checkbox" type="checkbox" id="check_humanites" name="sections" value="Humanités" onchange="updateOptionsVisibility()">
-                                    <label class="form-check-label" for="check_humanites">Humanités</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- OPTIONS CONCERNÉES -->
-                        <div class="mb-3" id="block_options" style="display: none;">
-                            <label class="form-label fw-bold">Options concernées :</label>
-                            <div class="border p-3 rounded bg-white">
-                                <div id="options_secondaire" style="display: none;" class="mb-2">
-                                    <p class="mb-1 text-muted fw-bold">Secondaire / EB :</p>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="options" value="Éducation de Base">
-                                        <label class="form-check-label">Tronc Commun (7e et 8e EB)</label>
-                                    </div>
-                                </div>
-
-                                <div id="options_humanites" style="display: none;">
-                                    <p class="mb-1 text-muted fw-bold">Humanités :</p>
-                                    <div class="form-check mb-2">
-                                        <input class="form-check-input" type="checkbox" id="check_toutes_options" name="options" value="Toutes Options" onchange="toggleToutesOptions(this)">
-                                        <label class="form-check-label fw-bold text-success" for="check_toutes_options">Toutes les options des humanités</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input opt-humanite" type="checkbox" name="options" value="Pédagogie Générale">
-                                        <label class="form-check-label">Pédagogie Générale</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input opt-humanite" type="checkbox" name="options" value="Scientifique">
-                                        <label class="form-check-label">Scientifique</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input opt-humanite" type="checkbox" name="options" value="Commerciale & Gestion">
-                                        <label class="form-check-label">Commerciale & Gestion</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input opt-humanite" type="checkbox" name="options" value="Coupe & Couture">
-                                        <label class="form-check-label">Coupe & Couture</label>
-                                    </div>
+                                    <input class="form-check-input section-checkbox" type="checkbox" name="sections" value="Humanités">
+                                    <label class="form-check-label">Humanités</label>
                                 </div>
                             </div>
                         </div>
@@ -142,19 +99,18 @@
         </div>
     </div>
 
-    <!-- Liste des Rubriques Existantes -->
+    <!-- Tableau des Rubriques -->
     <div class="card shadow-sm mt-3">
         <div class="card-header bg-secondary text-white">
             <h5 class="card-title mb-0">Rubriques Enregistrées</h5>
         </div>
         <div class="card-body">
-            <table class="table table-striped table-hover align-middle">
+            <table class="table table-striped align-middle">
                 <thead>
                     <tr>
                         <th>Nom</th>
                         <th>Montant</th>
                         <th>Sections</th>
-                        <th>Options</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -164,12 +120,9 @@
                         <td><strong>{{ r.nom }}</strong></td>
                         <td>{{ "{:,.0f}".format(r.montant) }} FC</td>
                         <td><span class="badge bg-info text-dark">{{ r.sections }}</span></td>
-                        <td><span class="badge bg-light text-dark border">{{ r.options }}</span></td>
                         <td class="text-end">
-                            <button type="button" class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#editModal{{ r.id }}">
-                                ✏️ Modifier
-                            </button>
-                            <form method="POST" action="{{ url_for('admin') }}" class="d-inline" onsubmit="return confirm('Voulez-vous vraiment supprimer cette rubrique ?');">
+                            <button type="button" class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#editModal{{ r.id }}">✏️ Modifier</button>
+                            <form method="POST" action="{{ url_for('admin') }}" class="d-inline" onsubmit="return confirm('Supprimer cette rubrique ?');">
                                 <input type="hidden" name="action" value="supprimer_rubrique">
                                 <input type="hidden" name="rubrique_id" value="{{ r.id }}">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">🗑️</button>
@@ -177,8 +130,8 @@
                         </td>
                     </tr>
 
-                    <!-- MODAL MODIFIER -->
-                    <div class="modal fade" id="editModal{{ r.id }}" tabindex="-1" aria-hidden="true">
+                    <!-- MODAL MODIFICATION -->
+                    <div class="modal fade" id="editModal{{ r.id }}" tabindex="-1">
                         <div class="modal-dialog">
                             <div class="modal-content">
                                 <form method="POST" action="{{ url_for('admin') }}">
@@ -186,15 +139,13 @@
                                         <h5 class="modal-title">Modifier : {{ r.nom }}</h5>
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
-                                    <div class="modal-body text-start">
+                                    <div class="modal-body">
                                         <input type="hidden" name="action" value="modifier_rubrique">
                                         <input type="hidden" name="rubrique_id" value="{{ r.id }}">
-
                                         <div class="mb-3">
-                                            <label class="form-label fw-bold">Nom de la rubrique</label>
+                                            <label class="form-label fw-bold">Nom</label>
                                             <input type="text" name="nom" class="form-control" value="{{ r.nom }}" required>
                                         </div>
-
                                         <div class="mb-3">
                                             <label class="form-label fw-bold">Montant (FC)</label>
                                             <input type="number" name="montant" class="form-control" value="{{ r.montant }}" required>
@@ -209,9 +160,7 @@
                         </div>
                     </div>
                     {% else %}
-                    <tr>
-                        <td colspan="5" class="text-center text-muted">Aucune rubrique enregistrée.</td>
-                    </tr>
+                    <tr><td colspan="4" class="text-center text-muted">Aucune rubrique enregistrée.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -226,44 +175,8 @@ function toggleToutesSections(master) {
         cb.checked = master.checked;
         cb.disabled = master.checked;
     });
-    updateOptionsVisibility();
-}
-
-function toggleToutesOptions(master) {
-    let checkboxes = document.querySelectorAll('.opt-humanite');
-    checkboxes.forEach(cb => {
-        cb.checked = master.checked;
-        cb.disabled = master.checked;
-    });
-}
-
-function updateOptionsVisibility() {
-    let isToutes = document.getElementById('check_toutes').checked;
-    let isSecondaire = document.getElementById('check_secondaire').checked;
-    let isHumanites = document.getElementById('check_humanites').checked;
-
-    let blockOptions = document.getElementById('block_options');
-    let blockSec = document.getElementById('options_secondaire');
-    let blockHum = document.getElementById('options_humanites');
-
-    if (isToutes) {
-        blockOptions.style.display = 'block';
-        blockSec.style.display = 'block';
-        blockHum.style.display = 'block';
-        return;
-    }
-
-    blockSec.style.display = isSecondaire ? 'block' : 'none';
-    blockHum.style.display = isHumanites ? 'block' : 'none';
-
-    if (isSecondaire || isHumanites) {
-        blockOptions.style.display = 'block';
-    } else {
-        blockOptions.style.display = 'none';
-    }
 }
 </script>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
