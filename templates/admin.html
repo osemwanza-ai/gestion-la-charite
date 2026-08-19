@@ -148,26 +148,69 @@
             <h5 class="card-title mb-0">Rubriques Enregistrées</h5>
         </div>
         <div class="card-body">
-            <table class="table table-striped table-hover">
+            <table class="table table-striped table-hover align-middle">
                 <thead>
                     <tr>
                         <th>Nom</th>
                         <th>Montant</th>
                         <th>Sections</th>
                         <th>Options</th>
+                        <th class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for r in rubriques %}
                     <tr>
-                        <td>{{ r.nom }}</td>
+                        <td><strong>{{ r.nom }}</strong></td>
                         <td>{{ "{:,.0f}".format(r.montant) }} FC</td>
                         <td><span class="badge bg-info text-dark">{{ r.sections }}</span></td>
                         <td><span class="badge bg-light text-dark border">{{ r.options }}</span></td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#editModal{{ r.id }}">
+                                ✏️ Modifier
+                            </button>
+                            <form method="POST" action="{{ url_for('admin') }}" class="d-inline" onsubmit="return confirm('Voulez-vous vraiment supprimer cette rubrique ?');">
+                                <input type="hidden" name="action" value="supprimer_rubrique">
+                                <input type="hidden" name="rubrique_id" value="{{ r.id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">🗑️</button>
+                            </form>
+                        </td>
                     </tr>
+
+                    <!-- MODAL MODIFIER -->
+                    <div class="modal fade" id="editModal{{ r.id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form method="POST" action="{{ url_for('admin') }}">
+                                    <div class="modal-header bg-primary text-white">
+                                        <h5 class="modal-title">Modifier : {{ r.nom }}</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body text-start">
+                                        <input type="hidden" name="action" value="modifier_rubrique">
+                                        <input type="hidden" name="rubrique_id" value="{{ r.id }}">
+
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Nom de la rubrique</label>
+                                            <input type="text" name="nom" class="form-control" value="{{ r.nom }}" required>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Montant (FC)</label>
+                                            <input type="number" name="montant" class="form-control" value="{{ r.montant }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                        <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                     {% else %}
                     <tr>
-                        <td colspan="4" class="text-center text-muted">Aucune rubrique enregistrée.</td>
+                        <td colspan="5" class="text-center text-muted">Aucune rubrique enregistrée.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
