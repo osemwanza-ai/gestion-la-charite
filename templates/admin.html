@@ -3,107 +3,224 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paramétrage des Frais - C.S. La Charité</title>
-    <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
-        body { background-color: #f8fafc; color: #1e293b; padding: 20px; }
-        .container { max-width: 850px; margin: 0 auto; }
-        .box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        input, select, button { width: 100%; padding: 10px; margin-top: 6px; margin-bottom: 14px; border: 1px solid #cbd5e1; border-radius: 8px; }
-        button { background: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; padding: 12px; }
-        .btn-back { display: inline-block; padding: 8px 14px; background: #e2e8f0; color: #334155; text-decoration: none; border-radius: 8px; margin-bottom: 15px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 14px; }
-        th { background-color: #1e3a8a; color: white; }
-        #div-option { display: none; background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 14px; border-left: 4px solid #2563eb; }
-    </style>
+    <title>Configuration Administrateur - C.S. La Charité</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-<div class="container">
-    <a href="/" class="btn-back">⬅️ Retour au tableau de bord</a>
+<body class="bg-light">
 
-    <div class="box">
-        <h2 style="margin-bottom: 15px; color: #1e3a8a;">Configuration Administrateur des Frais</h2>
-        <form method="POST">
-            <label><strong>1. Type de Frais</strong></label>
-            <select name="type_frais" required>
-                <option value="INSCRIPTION">Frais d'Inscription</option>
-                <option value="MINERVAL">Frais Scolaire (Minerval)</option>
-                <option value="TECHNIQUE">Frais Technique</option>
-                <option value="CONNEXE">Frais Connexe</option>
-            </select>
-
-            <label><strong>2. Section Concernée *</strong></label>
-            <select name="section" id="select-section" required onchange="verifierSection()">
-                <option value="">-- Sélectionner la Section --</option>
-                <option value="Maternelle">Maternelle</option>
-                <option value="Primaire">Primaire</option>
-                <option value="Secondaire">Secondaire</option>
-                <option value="Humanités">Humanités</option>
-            </select>
-
-            <!-- CHAMP DYNAMIQUE OPTION (Visible uniquement pour Secondaire & Humanités) -->
-            <div id="div-option">
-                <label style="color: #1e3a8a;"><strong>3. Préciser l'Option / Section Technique *</strong></label>
-                <input type="text" name="option" id="input-option" placeholder="ex: Électricité, Commerciale & Gestion, Coupe & Couture, Pédagogie...">
-            </div>
-
-            <label><strong>4. Montant Exigé ($ ou FC) *</strong></label>
-            <input type="number" step="0.01" name="montant" required placeholder="ex: 50">
-
-            <label><strong>5. Description / Motif complémentaire</strong></label>
-            <input type="text" name="description" placeholder="ex: Pour travaux pratiques, 1er Trimestre, etc.">
-
-            <button type="submit">Enregistrer et Activer ce Frais</button>
-        </form>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>⚙️ Configuration Administrateur des Frais</h2>
+        <a href="/" class="btn btn-secondary">⬅️ Tableau de Bord</a>
     </div>
 
-    <div class="box">
-        <h3>Grille Tarifaire Paramétrée</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Type</th>
-                    <th>Section</th>
-                    <th>Option</th>
-                    <th>Montant</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for f in frais %}
-                <tr>
-                    <td><strong>{{ f.type_frais }}</strong></td>
-                    <td>{{ f.section }}</td>
-                    <td>{{ f.option or '-' }}</td>
-                    <td>{{ f.montant }}</td>
-                    <td>{{ f.description or '-' }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5" style="text-align: center; color: #94a3b8;">Aucun frais paramétré.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Messages Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="row">
+        <!-- Configuration Frais d'Inscription -->
+        <div class="col-md-5 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Frais d'Inscription Général</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin') }}">
+                        <input type="hidden" name="action" value="frais_inscription">
+                        <div class="mb-3">
+                            <label class="form-label">Montant du frais d'inscription (FC)</label>
+                            <input type="number" name="montant" class="form-control" 
+                                   value="{{ frais_inscription.montant if frais_inscription else '' }}" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Enregistrer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration des Rubriques de Frais -->
+        <div class="col-md-7 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="card-title mb-0">Ajouter une Rubrique de Frais</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin') }}">
+                        <input type="hidden" name="action" value="ajouter_rubrique">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nom de la rubrique</label>
+                            <input type="text" name="nom" class="form-control" placeholder="Ex: Minerval, Bulletin..." required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Montant (FC)</label>
+                            <input type="number" name="montant" class="form-control" placeholder="Ex: 45000" required>
+                        </div>
+
+                        <!-- SECTIONS CONCERNÉES -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Sections concernées :</label>
+                            <div class="border p-3 rounded bg-white">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="check_toutes" name="sections" value="Toutes" onchange="toggleToutesSections(this)">
+                                    <label class="form-check-label fw-bold text-primary" for="check_toutes">
+                                        📌 Toutes les sections (Applicable à toute l'école)
+                                    </label>
+                                </div>
+                                <hr>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input section-checkbox" type="checkbox" id="check_maternelle" name="sections" value="Maternelle" onchange="updateOptionsVisibility()">
+                                    <label class="form-check-label" for="check_maternelle">Maternelle</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input section-checkbox" type="checkbox" id="check_primaire" name="sections" value="Primaire" onchange="updateOptionsVisibility()">
+                                    <label class="form-check-label" for="check_primaire">Primaire</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input section-checkbox" type="checkbox" id="check_secondaire" name="sections" value="Secondaire" onchange="updateOptionsVisibility()">
+                                    <label class="form-check-label" for="check_secondaire">Secondaire / EB (7e-8e)</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input section-checkbox" type="checkbox" id="check_humanites" name="sections" value="Humanités" onchange="updateOptionsVisibility()">
+                                    <label class="form-check-label" for="check_humanites">Humanités</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- OPTIONS CONCERNÉES -->
+                        <div class="mb-3" id="block_options" style="display: none;">
+                            <label class="form-label fw-bold">Options concernées :</label>
+                            <div class="border p-3 rounded bg-white">
+                                <div id="options_secondaire" style="display: none;" class="mb-2">
+                                    <p class="mb-1 text-muted fw-bold">Secondaire / EB :</p>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="options" value="Éducation de Base">
+                                        <label class="form-check-label">Tronc Commun (7e et 8e EB)</label>
+                                    </div>
+                                </div>
+
+                                <div id="options_humanites" style="display: none;">
+                                    <p class="mb-1 text-muted fw-bold">Humanités :</p>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="check_toutes_options" name="options" value="Toutes Options" onchange="toggleToutesOptions(this)">
+                                        <label class="form-check-label fw-bold text-success" for="check_toutes_options">Toutes les options des humanités</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input opt-humanite" type="checkbox" name="options" value="Pédagogie Générale">
+                                        <label class="form-check-label">Pédagogie Générale</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input opt-humanite" type="checkbox" name="options" value="Scientifique">
+                                        <label class="form-check-label">Scientifique</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input opt-humanite" type="checkbox" name="options" value="Commerciale & Gestion">
+                                        <label class="form-check-label">Commerciale & Gestion</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input opt-humanite" type="checkbox" name="options" value="Coupe & Couture">
+                                        <label class="form-check-label">Coupe & Couture</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100">➕ Créer la rubrique</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des Rubriques Existantes -->
+    <div class="card shadow-sm mt-3">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="card-title mb-0">Rubriques Enregistrées</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Montant</th>
+                        <th>Sections</th>
+                        <th>Options</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rubriques %}
+                    <tr>
+                        <td>{{ r.nom }}</td>
+                        <td>{{ "{:,.0f}".format(r.montant) }} FC</td>
+                        <td><span class="badge bg-info text-dark">{{ r.sections }}</span></td>
+                        <td><span class="badge bg-light text-dark border">{{ r.options }}</span></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">Aucune rubrique enregistrée.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
-function verifierSection() {
-    var sectionSelect = document.getElementById("select-section").value;
-    var divOption = document.getElementById("div-option");
-    var inputOption = document.getElementById("input-option");
+function toggleToutesSections(master) {
+    let checkboxes = document.querySelectorAll('.section-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = master.checked;
+        cb.disabled = master.checked;
+    });
+    updateOptionsVisibility();
+}
 
-    if (sectionSelect === "Secondaire" || sectionSelect === "Humanités") {
-        divOption.style.display = "block";
-        inputOption.setAttribute("required", "required");
+function toggleToutesOptions(master) {
+    let checkboxes = document.querySelectorAll('.opt-humanite');
+    checkboxes.forEach(cb => {
+        cb.checked = master.checked;
+        cb.disabled = master.checked;
+    });
+}
+
+function updateOptionsVisibility() {
+    let isToutes = document.getElementById('check_toutes').checked;
+    let isSecondaire = document.getElementById('check_secondaire').checked;
+    let isHumanites = document.getElementById('check_humanites').checked;
+
+    let blockOptions = document.getElementById('block_options');
+    let blockSec = document.getElementById('options_secondaire');
+    let blockHum = document.getElementById('options_humanites');
+
+    if (isToutes) {
+        blockOptions.style.display = 'block';
+        blockSec.style.display = 'block';
+        blockHum.style.display = 'block';
+        return;
+    }
+
+    blockSec.style.display = isSecondaire ? 'block' : 'none';
+    blockHum.style.display = isHumanites ? 'block' : 'none';
+
+    if (isSecondaire || isHumanites) {
+        blockOptions.style.display = 'block';
     } else {
-        divOption.style.display = "none";
-        inputOption.removeAttribute("required");
-        inputOption.value = "";
+        blockOptions.style.display = 'none';
     }
 }
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
