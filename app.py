@@ -63,7 +63,6 @@ class Paiement(db.Model):
 # --- CREATION & AUTO-MIGRATION DES TABLES ---
 with app.app_context():
     db.create_all()
-    # Migration automatique si la colonne mode_paiement n'existait pas
     try:
         db.session.execute(text("ALTER TABLE paiement ADD COLUMN IF NOT EXISTS mode_paiement VARCHAR(50) DEFAULT 'Espèces';"))
         db.session.commit()
@@ -191,6 +190,26 @@ def paiement(eleve_id=None):
     except Exception as e:
         db.session.rollback()
         flash(f"Erreur : {str(e)}", "danger")
+        return redirect(url_for('index'))
+
+@app.route('/download/<type_rapport>')
+def download_rapport(type_rapport):
+    try:
+        output = io.StringIO()
+        output.write("Matricule;Nom Complet;Rubrique;Trimestre;Montant (FC);Date\n")
+        paiements = Paiement.query.all()
+        for p in paiements:
+            mat = p.eleve.matricule if p.eleve else "-"
+            nom = p.eleve.nom_complet if p.eleve else "-"
+            rubrique = p.rubrique.nom if p.rubrique else "-"
+            output.write(f"{mat};{nom};{rubrique};{p.trimestre};{p.montant};{p.date_paiement.strftime('%d/%m/%Y')}\n")
+        
+        mem = io.BytesIO()
+        mem.write(output.getvalue().encode('utf-8-sig'))
+        mem.seek(0)
+        return send_file(mem, mimetype='text/csv', as_attachment=True, download_name=f'rapport_{type_rapport}.csv')
+    except Exception as e:
+        flash(f"Erreur export : {str(e)}", "danger")
         return redirect(url_for('index'))
 
 if __name__ == '__main__':
