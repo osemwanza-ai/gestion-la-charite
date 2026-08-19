@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 from datetime import datetime
 import os
 import io
@@ -59,8 +60,15 @@ class Paiement(db.Model):
     rubrique = db.relationship('RubriqueFrais', lazy=True)
     eleve = db.relationship('Eleve', lazy=True)
 
+# --- CREATION & AUTO-MIGRATION DES TABLES ---
 with app.app_context():
     db.create_all()
+    # Migration automatique si la colonne mode_paiement n'existait pas
+    try:
+        db.session.execute(text("ALTER TABLE paiement ADD COLUMN IF NOT EXISTS mode_paiement VARCHAR(50) DEFAULT 'Espèces';"))
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
 
 # --- ROUTES ---
 @app.route('/')
@@ -68,7 +76,10 @@ def index():
     try:
         total_eleves = db.session.query(Eleve).count()
         paiements = Paiement.query.all()
-        total_recettes = sum(p.montant for p in paiements) if paiements else 0.0
+        frais_inscr = FraisInscription.query.first()
+        montant_inscr = frais_inscr.montant if frais_inscr else 0.0
+
+        total_recettes = sum(p.montant for p in paiements) + (total_eleves * montant_inscr)
 
         trimestres = ['1er Trimestre', '2ème Trimestre', '3ème Trimestre']
         stats_trimestres = {}
@@ -85,7 +96,7 @@ def index():
         return render_template('dashboard.html', total_eleves=total_eleves, total_recettes=total_recettes, stats_trimestres=stats_trimestres)
     except Exception as e:
         db.session.rollback()
-        return f"Erreur Serveur Interne : {str(e)}", 500
+        return f"Erreur Serveur : {str(e)}", 500
 
 @app.route('/eleves')
 def liste_eleves():
@@ -104,7 +115,7 @@ def inscription():
 
             e = Eleve(
                 matricule=mat,
-                nom_complet=request.form.get('nom_complet', 'Saisie invalide'),
+                nom_complet=request.form.get('nom_complet', '').strip(),
                 sexe=request.form.get('sexe', 'M'),
                 date_naissance=request.form.get('date_naissance', ''),
                 lieu_naissance=request.form.get('lieu_naissance', ''),
@@ -152,30 +163,35 @@ def admin():
 @app.route('/paiement', methods=['GET', 'POST'])
 @app.route('/paiement/<int:eleve_id>', methods=['GET', 'POST'])
 def paiement(eleve_id=None):
-    eleves = Eleve.query.order_by(Eleve.nom_complet.asc()).all()
-    rubriques = RubriqueFrais.query.all()
-    eleve_sel = Eleve.query.get(eleve_id) if eleve_id else None
+    try:
+        eleves = Eleve.query.order_by(Eleve.nom_complet.asc()).all()
+        rubriques = RubriqueFrais.query.all()
+        eleve_sel = Eleve.query.get(eleve_id) if eleve_id else None
 
-    if request.method == 'POST':
-        if 'select_eleve' in request.form:
-            sel_id = request.form.get('eleve_id')
-            if sel_id:
-                return redirect(url_for('paiement', eleve_id=int(sel_id)))
-        elif eleve_sel and request.form.get('rubrique_id'):
-            p = Paiement(
-                eleve_id=eleve_sel.id,
-                rubrique_id=int(request.form.get('rubrique_id')),
-                trimestre=request.form.get('trimestre', '1er Trimestre'),
-                montant=float(request.form.get('montant', 0)),
-                mode_paiement=request.form.get('mode_paiement', 'Espèces')
-            )
-            db.session.add(p)
-            db.session.commit()
-            flash("Paiement enregistré !", "success")
-            return redirect(url_for('paiement', eleve_id=eleve_sel.id))
+        if request.method == 'POST':
+            if 'select_eleve' in request.form:
+                sel_id = request.form.get('eleve_id')
+                if sel_id:
+                    return redirect(url_for('paiement', eleve_id=int(sel_id)))
+            elif eleve_sel and request.form.get('rubrique_id'):
+                p = Paiement(
+                    eleve_id=eleve_sel.id,
+                    rubrique_id=int(request.form.get('rubrique_id')),
+                    trimestre=request.form.get('trimestre', '1er Trimestre'),
+                    montant=float(request.form.get('montant', 0)),
+                    mode_paiement=request.form.get('mode_paiement', 'Espèces')
+                )
+                db.session.add(p)
+                db.session.commit()
+                flash("Paiement enregistré !", "success")
+                return redirect(url_for('paiement', eleve_id=eleve_sel.id))
 
-    historique = Paiement.query.filter_by(eleve_id=eleve_sel.id).all() if eleve_sel else []
-    return render_template('paiement.html', eleve=eleve_sel, eleves=eleves, rubriques=rubriques, historique=historique)
+        historique = Paiement.query.filter_by(eleve_id=eleve_sel.id).order_by(Paiement.date_paiement.desc()).all() if eleve_sel else []
+        return render_template('paiement.html', eleve=eleve_sel, eleves=eleves, rubriques=rubriques, historique=historique)
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erreur : {str(e)}", "danger")
+        return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True)
