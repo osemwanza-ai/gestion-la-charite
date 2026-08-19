@@ -37,16 +37,21 @@ class Paiement(db.Model):
     type_frais = db.Column(db.String(50), nullable=False)
     montant = db.Column(db.Float, nullable=False)
 
+# Reconstitution propre de la base de données
 with app.app_context():
-    db.drop_all()  # Supprime les anciennes tables obsolètes
-    db.create_all()  # Recrée les tables avec la bonne structure
+    db.drop_all()
+    db.create_all()
 
 # Dashboard Principal
 @app.route('/')
 def dashboard():
-    total_eleves = Eleve.query.count()
-    paiements = Paiement.query.all()
-    total_recettes = sum(p.montant for p in paiements)
+    try:
+        total_eleves = Eleve.query.count()
+        paiements = Paiement.query.all()
+        total_recettes = sum(p.montant for p in paiements)
+    except Exception:
+        total_eleves = 0
+        total_recettes = 0
     return render_template('dashboard.html', total_eleves=total_eleves, total_recettes=total_recettes)
 
 # Module Inscriptions & Liste Élèves
@@ -57,7 +62,6 @@ def eleves():
         classe = request.form.get('classe')
         telephone = request.form.get('telephone_tuteur')
         
-        # Génération automatique d'un matricule
         count = Eleve.query.count() + 1
         matricule = f"CHAR-{datetime.now().year}-{count:03d}"
 
