@@ -36,6 +36,7 @@ class RubriqueFrais(db.Model):
 
 class Eleve(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    matricule = db.Column(db.String(20), unique=True, nullable=False)
     nom_complet = db.Column(db.String(100), nullable=False)
     sexe = db.Column(db.String(10), nullable=False)
     date_naissance = db.Column(db.String(20))
@@ -91,11 +92,6 @@ def liste_eleves():
     eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
     return render_template('eleves.html', eleves=eleves)
 
-@app.route('/paiements')
-def paiements():
-    paiements_liste = Paiement.query.order_by(Paiement.date_paiement.desc()).all()
-    return render_template('paiements.html', paiements=paiements_liste)
-
 @app.route('/inscription', methods=['GET', 'POST'])
 def inscription():
     try:
@@ -108,7 +104,13 @@ def inscription():
             flash("⚠️ L'inscription est bloquée : les frais n'ont pas été configurés.", "danger")
             return redirect(url_for('inscription'))
 
+        annee_en_cours = datetime.now().year
+        dernier_eleve = Eleve.query.order_by(Eleve.id.desc()).first()
+        suivant_id = (dernier_eleve.id + 1) if dernier_eleve else 1
+        nouveau_matricule = f"CH-{annee_en_cours}-{suivant_id:03d}"
+
         nouveau_eleve = Eleve(
+            matricule=nouveau_matricule,
             nom_complet=request.form.get('nom_complet'),
             sexe=request.form.get('sexe'),
             date_naissance=request.form.get('date_naissance'),
@@ -125,7 +127,7 @@ def inscription():
         db.session.add(nouveau_eleve)
         db.session.commit()
 
-        flash("✅ Élève inscrit avec succès !", "success")
+        flash(f"✅ Élève inscrit avec succès ! Matricule attribué : {nouveau_matricule}", "success")
         return redirect(url_for('index'))
 
     return render_template('inscription.html', frais=frais)
@@ -172,15 +174,6 @@ def admin():
             
             rubrique.nom = request.form.get('nom')
             rubrique.montant = float(request.form.get('montant'))
-            
-            sections_list = request.form.getlist('sections')
-            options_list = request.form.getlist('options')
-            
-            if sections_list:
-                rubrique.sections = ", ".join(sections_list)
-            if options_list:
-                rubrique.options = ", ".join(options_list)
-                
             db.session.commit()
             flash("✏️ Rubrique modifiée avec succès.", "info")
 
@@ -202,50 +195,73 @@ def admin():
         
     return render_template('admin.html', frais_inscription=frais_inscription, rubriques=rubriques)
 
+@app.route('/payer', methods=['GET', 'POST'])
 @app.route('/payer/<int:eleve_id>', methods=['GET', 'POST'])
-def payer(eleve_id):
-    eleve = Eleve.query.get_or_404(eleve_id)
+def payer(eleve_id=None):
+    eleves = Eleve.query.order_by(Eleve.nom_complet.asc()).all()
+    eleve_selectionne = Eleve.query.get(eleve_id) if eleve_id else None
     rubriques = RubriqueFrais.query.all()
     
     if request.method == 'POST':
-        rubrique_id = request.form.get('rubrique_id')
-        trimestre = request.form.get('trimestre')
-        montant_verse = float(request.form.get('montant'))
-        
-        rubrique = RubriqueFrais.query.get(rubrique_id)
-        montant_fixe = rubrique.montant
+        if not eleve_selectionne:
+            selected_id = request.form.get('eleve_id')
+            if selected_id:
+                return redirect(url_for('payer', eleve_id=selected_id))
 
-        paiements_existants = Paiement.query.filter_by(
-            eleve_id=eleve.id, 
-            rubrique_id=rubrique_id, 
-            trimestre=trimestre
-        ).all()
-        
-        total_deja_paye = sum(p.montant for p in paiements_existants)
-        reste_a_payer = montant_fixe - total_deja_paye
+        if eleve_selectionne:
+            rubrique_id = request.form.get('rubrique_id')
+            trimestre = request.form.get('trimestre')
+            montant_verse = float(request.form.get('montant'))
+            
+            rubrique = RubriqueFrais.query.get(rubrique_id)
+            montant_fixe = rubrique.montant
 
-        if reste_a_payer <= 0:
-            flash(f"⚠️ Le solde pour {rubrique.nom} ({trimestre}) est apuré.", "danger")
-            return redirect(url_for('payer', eleve_id=eleve.id))
+            paiements_existants = Paiement.query.filter_by(
+                eleve_id=eleve_selectionne.id, 
+                rubrique_id=rubrique_id, 
+                trimestre=trimestre
+            ).all()
+            
+            total_deja_paye = sum(p.montant for p in paiements_existants)
+            reste_a_payer = montant_fixe - total_deja_paye
 
-        if montant_verse > reste_a_payer:
-            flash(f"⚠️ Le montant dépasse le solde du {trimestre} ({reste_a_payer:,.0f} FC restant).", "warning")
-            return redirect(url_for('payer', eleve_id=eleve.id))
+            if reste_a_payer <= 0:
+                flash(f"⚠️ Le solde pour {rubrique.nom} ({trimestre}) est déjà apuré.", "danger")
+                return redirect(url_for('payer', eleve_id=eleve_selectionne.id))
 
-        nouveau_paiement = Paiement(
-            eleve_id=eleve.id,
-            rubrique_id=rubrique_id,
-            trimestre=trimestre,
-            montant=montant_verse,
-            date_paiement=datetime.now()
-        )
-        db.session.add(nouveau_paiement)
-        db.session.commit()
+            if montant_verse > reste_a_payer:
+                flash(f"⚠️ Le montant dépasse le solde du {trimestre} ({reste_a_payer:,.0f} FC restant).", "warning")
+                return redirect(url_for('payer', eleve_id=eleve_selectionne.id))
 
-        flash(f"✅ Paiement de {montant_verse:,.0f} FC enregistré.", "success")
-        return redirect(url_for('index'))
+            nouveau_paiement = Paiement(
+                eleve_id=eleve_selectionne.id,
+                rubrique_id=rubrique_id,
+                trimestre=trimestre,
+                montant=montant_verse,
+                date_paiement=datetime.now()
+            )
+            db.session.add(nouveau_paiement)
+            db.session.commit()
 
-    return render_template('payer.html', eleve=eleve, rubriques=rubriques)
+            flash(f"✅ Paiement de {montant_verse:,.0f} FC enregistré pour {eleve_selectionne.nom_complet}.", "success")
+            return redirect(url_for('rapports'))
+
+    return render_template('payer.html', eleve=eleve_selectionne, eleves=eleves, rubriques=rubriques)
+
+@app.route('/rapports')
+def rapports():
+    type_rapport = request.args.get('type', 'tous')
+    query = Paiement.query
+
+    if type_rapport == 'minerval':
+        query = query.join(RubriqueFrais).filter(RubriqueFrais.nom.ilike('%minerval%'))
+    elif type_rapport == 'connexes':
+        query = query.join(RubriqueFrais).filter(~RubriqueFrais.nom.ilike('%minerval%'), ~RubriqueFrais.nom.ilike('%inscription%'))
+
+    paiements_filtrés = query.order_by(Paiement.date_paiement.desc()).all()
+    total_encaisse = sum(p.montant for p in paiements_filtrés)
+
+    return render_template('rapports.html', paiements=paiements_filtrés, total=total_encaisse, type_actuel=type_rapport)
 
 if __name__ == '__main__':
     app.run(debug=True)
