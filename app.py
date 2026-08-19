@@ -13,24 +13,40 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+# --- MODÈLES DE BASE DE DONNÉES ---
+
+# Paramétrage des frais par l'Admin
+class ConfigurationFrais(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    type_frais = db.Column(db.String(100), nullable=False) # Inscription, Minerval, Technique, Connexe
+    montant = db.Column(db.Float, nullable=False)
+    description = db.Column(db.String(200), nullable=True) # Ex: 1er Trimestre, Option Technique, Motif connexe
+
+# Registre des Élèves
 class Eleve(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nom_complet = db.Column(db.String(100), nullable=False)
     classe = db.Column(db.String(50), nullable=False)
     matricule = db.Column(db.String(50), unique=True, nullable=False)
     telephone_tuteur = db.Column(db.String(20), nullable=True)
-    frais_total = db.Column(db.Float, default=0.0)
+    date_inscription = db.Column(db.String(50), nullable=False)
 
+# Registre Général des Paiements
 class Paiement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date_heure = db.Column(db.String(50), nullable=False)
+    eleve_id = db.Column(db.Integer, db.ForeignKey('eleve.id'), nullable=False)
     nom_eleve = db.Column(db.String(100), nullable=False)
     classe = db.Column(db.String(50), nullable=False)
-    type_frais = db.Column(db.String(50), nullable=False)
+    categorie_frais = db.Column(db.String(50), nullable=False) # INSCRIPTION, MINERVAL, TECHNIQUE, CONNEXE
+    trimestre = db.Column(db.String(20), nullable=True) # 1er Trimestre, 2ème Trimestre, 3ème Trimestre
+    motif_detail = db.Column(db.String(150), nullable=True)
     montant = db.Column(db.Float, nullable=False)
 
 with app.app_context():
     db.create_all()
+
+# --- ROUTES & LOGIQUE ---
 
 @app.route('/')
 def dashboard():
@@ -39,101 +55,145 @@ def dashboard():
     total_recettes = sum(p.montant for p in paiements)
     return render_template('dashboard.html', total_eleves=total_eleves, total_recettes=total_recettes)
 
-# ONGLET 1 : Page d'inscription uniquement
+# 1. PAGE ADMINISTRATION : Définition des frais
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    if request.method == 'POST':
+        type_frais = request.form.get('type_frais')
+        montant = float(request.form.get('montant', 0))
+        description = request.form.get('description', '')
+
+        nouveau_frais = ConfigurationFrais(
+            type_frais=type_frais,
+            montant=montant,
+            description=description
+        )
+        db.session.add(nouveau_frais)
+        db.session.commit()
+        return redirect(url_for('admin'))
+
+    frais_configures = ConfigurationFrais.query.all()
+    return render_template('admin.html', frais=frais_configures)
+
+# 2. PAGE INSCRIPTION : Uniquement liée au paiement du frais d'inscription
 @app.route('/inscription', methods=['GET', 'POST'])
 def inscription():
+    frais_inscription = ConfigurationFrais.query.filter_by(type_frais='INSCRIPTION').first()
+    
     if request.method == 'POST':
+        if not frais_inscription:
+            return "Erreur : Le frais d'inscription n'a pas encore été paramétré dans l'administration.", 400
+
         nom = request.form.get('nom_complet')
         classe = request.form.get('classe')
         telephone = request.form.get('telephone_tuteur')
-        frais = float(request.form.get('frais_total', 0))
+        date_actuelle = datetime.now().strftime("%d/%m/%Y %H:%M")
         
         count = Eleve.query.count() + 1
         matricule = f"CHAR-{datetime.now().year}-{count:03d}"
 
+        # Enregistrement de l'élève
         nouvel_eleve = Eleve(
             nom_complet=nom,
             classe=classe,
             matricule=matricule,
             telephone_tuteur=telephone,
-            frais_total=frais
+            date_inscription=date_actuelle
         )
         db.session.add(nouvel_eleve)
-        db.session.commit()
-        return redirect(url_for('eleves'))
+        db.session.flush() # Récupère l'ID généré
 
-    return render_template('inscription.html')
-
-# ONGLET 2 : Repertoire des élèves & État de paiement
-@app.route('/eleves')
-def eleves():
-    liste_eleves = Eleve.query.order_by(Eleve.nom_complet.asc()).all()
-    donnees_eleves = []
-
-    for el in liste_eleves:
-        paiements_eleve = Paiement.query.filter_by(nom_eleve=el.nom_complet).all()
-        total_paye = sum(p.montant for p in paiements_eleve)
-        reste = el.frais_total - total_paye
-        est_en_regle = reste <= 0 and el.frais_total > 0
-
-        donnees_eleves.append({
-            'matricule': el.matricule,
-            'nom_complet': el.nom_complet,
-            'classe': el.classe,
-            'telephone': el.telephone_tuteur or '-',
-            'frais_total': el.frais_total,
-            'total_paye': total_paye,
-            'reste': max(0, reste),
-            'en_regle': est_en_regle
-        })
-
-    return render_template('eleves.html', eleves=donnees_eleves)
-
-@app.route('/paiements', methods=['GET', 'POST'])
-def paiements():
-    donnees_recu = None
-    eleves_liste = Eleve.query.all()
-    if request.method == 'POST':
-        nom = request.form.get('nom_eleve')
-        classe = request.form.get('classe')
-        type_frais = request.form.get('type_frais')
-        montant = float(request.form.get('montant', 0))
-        date_heure = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-        nouveau = Paiement(
-            date_heure=date_heure,
+        # Enregistrement comptable automatique du paiement d'inscription
+        paiement_ins = Paiement(
+            date_heure=date_actuelle,
+            eleve_id=nouvel_eleve.id,
             nom_eleve=nom,
             classe=classe,
-            type_frais=type_frais,
+            categorie_frais='INSCRIPTION',
+            montant=frais_inscription.montant,
+            motif_detail="Frais d'inscription obligatoire"
+        )
+        db.session.add(paiement_ins)
+        db.session.commit()
+
+        return redirect(url_for('eleves'))
+
+    return render_template('inscription.html', frais=frais_inscription)
+
+# 3. PERCEPTION DE PAIMENTS (Réservé aux élèves inscrits)
+@app.route('/paiements', methods=['GET', 'POST'])
+def paiements():
+    eleves_inscrits = Eleve.query.order_by(Eleve.nom_complet.asc()).all()
+    frais_autorises = ConfigurationFrais.query.all()
+    donnees_recu = None
+
+    if request.method == 'POST':
+        eleve_id = request.form.get('eleve_id')
+        eleve = Eleve.query.get(eleve_id)
+        
+        categorie = request.form.get('categorie_frais')
+        trimestre = request.form.get('trimestre')
+        motif = request.form.get('motif_detail')
+        montant = float(request.form.get('montant', 0))
+        date_actuelle = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+        nouveau_p = Paiement(
+            date_heure=date_actuelle,
+            eleve_id=eleve.id,
+            nom_eleve=eleve.nom_complet,
+            classe=eleve.classe,
+            categorie_frais=categorie,
+            trimestre=trimestre if categorie == 'MINERVAL' else '-',
+            motif_detail=motif,
             montant=montant
         )
-        db.session.add(nouveau)
+        db.session.add(nouveau_p)
         db.session.commit()
 
         donnees_recu = {
-            'nom': nom,
-            'classe': classe,
-            'type_frais': type_frais,
+            'nom': eleve.nom_complet,
+            'classe': eleve.classe,
+            'categorie': categorie,
+            'trimestre': trimestre,
             'montant': montant,
-            'date_heure': date_heure
+            'date_heure': date_actuelle
         }
 
-    return render_template('paiements.html', recu=donnees_recu, eleves=eleves_liste)
+    return render_template('paiements.html', eleves=eleves_inscrits, frais_liste=frais_autorises, recu=donnees_recu)
 
-@app.route('/historique')
-def historique():
-    liste = Paiement.query.order_by(Paiement.id.desc()).all()
-    return render_template('historique.html', paiements=liste)
+# 4. RÉPERTOIRE DES ÉLÈVES
+@app.route('/eleves')
+def eleves():
+    liste = Eleve.query.order_by(Eleve.nom_complet.asc()).all()
+    return render_template('eleves.html', eleves=liste)
 
-@app.route('/download')
-def download():
+# 5. RAPPORTS EXCEL SÉPARÉS POUR LA COMPTABILITÉ
+@app.route('/download/<type_rapport>')
+def download_rapport(type_rapport):
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Paiements"
-    ws.append(["N°", "Date & Heure", "Élève", "Classe", "Type de Frais", "Montant (FC)"])
 
-    for p in Paiement.query.all():
-        ws.append([p.id, p.date_heure, p.nom_eleve, p.classe, p.type_frais, p.montant])
+    if type_rapport == 'inscription':
+        ws.title = "Frais d'Inscription"
+        ws.append(["N°", "Date & Heure", "Matricule", "Élève", "Classe", "Montant Payé"])
+        paiements = Paiement.query.filter_by(categorie_frais='INSCRIPTION').all()
+        for p in paiements:
+            e = Eleve.query.get(p.eleve_id)
+            ws.append([p.id, p.date_heure, e.matricule if e else '-', p.nom_eleve, p.classe, p.montant])
+
+    elif type_rapport == 'minerval':
+        ws.title = "Frais de Minerval"
+        ws.append(["N°", "Date & Heure", "Élève", "Classe", "Trimestre", "Montant Payé"])
+        paiements = Paiement.query.filter_by(categorie_frais='MINERVAL').all()
+        for p in paiements:
+            ws.append([p.id, p.date_heure, p.nom_eleve, p.classe, p.trimestre, p.montant])
+
+    elif type_rapport == 'technique':
+        ws.title = "Frais Techniques et Connexes"
+        ws.append(["N°", "Date & Heure", "Élève", "Classe", "Catégorie", "Motif / Option", "Montant Payé"])
+        paiements = Paiement.query.filter(Paiement.categorie_frais.in_(['TECHNIQUE', 'CONNEXE'])).all()
+        for p in paiements:
+            ws.append([p.id, p.date_heure, p.nom_eleve, p.classe, p.categorie_frais, p.motif_detail, p.montant])
 
     output = BytesIO()
     wb.save(output)
@@ -142,7 +202,7 @@ def download():
     return send_file(
         output,
         as_attachment=True,
-        download_name="rapport_paiements.xlsx",
+        download_name=f"rapport_{type_rapport}.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
