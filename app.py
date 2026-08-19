@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, send_file
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
 import openpyxl
 from io import BytesIO
 from datetime import datetime
@@ -8,21 +7,14 @@ import os
 
 app = Flask(__name__)
 
-# Base de données PostgreSQL
-db_url = os.environ.get('DATABASE_URL')
-if db_url and db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
-
-if not db_url:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    db_url = f"sqlite:///{os.path.join(BASE_DIR, 'charite.db')}"
-
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+# Utilisation d'une base de données locale stable pour éviter les conflits PostgreSQL
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(BASE_DIR, 'charite_v2.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Modèles de base de données
+# Modèles
 class Eleve(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nom_complet = db.Column(db.String(100), nullable=False)
@@ -38,25 +30,16 @@ class Paiement(db.Model):
     type_frais = db.Column(db.String(50), nullable=False)
     montant = db.Column(db.Float, nullable=False)
 
-# Nettoyage forcé et récréation des tables
+# Création automatique des nouvelles tables
 with app.app_context():
-    try:
-        db.session.execute(text("DROP TABLE IF EXISTS eleve, paiement CASCADE;"))
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
     db.create_all()
 
 # Dashboard Principal
 @app.route('/')
 def dashboard():
-    try:
-        total_eleves = Eleve.query.count()
-        paiements = Paiement.query.all()
-        total_recettes = sum(p.montant for p in paiements)
-    except Exception:
-        total_eleves = 0
-        total_recettes = 0
+    total_eleves = Eleve.query.count()
+    paiements = Paiement.query.all()
+    total_recettes = sum(p.montant for p in paiements)
     return render_template('dashboard.html', total_eleves=total_eleves, total_recettes=total_recettes)
 
 # Module Inscriptions & Liste Élèves
