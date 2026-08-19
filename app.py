@@ -38,7 +38,8 @@ class Paiement(db.Model):
     montant = db.Column(db.Float, nullable=False)
 
 with app.app_context():
-    db.create_all()
+    db.drop_all()  # Supprime les anciennes tables obsolètes
+    db.create_all()  # Recrée les tables avec la bonne structure
 
 # Dashboard Principal
 @app.route('/')
