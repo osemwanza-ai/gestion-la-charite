@@ -17,20 +17,30 @@ db = SQLAlchemy(app)
 
 class ConfigurationFrais(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    type_frais = db.Column(db.String(100), nullable=False) # INSCRIPTION, MINERVAL, TECHNIQUE, CONNEXE
-    section = db.Column(db.String(50), nullable=False)    # Maternelle, Primaire, Secondaire, Humanités
-    option = db.Column(db.String(100), nullable=True)     # Ex: Coupe & Couture, Électricité, Général...
+    type_frais = db.Column(db.String(100), nullable=False)
+    section = db.Column(db.String(50), nullable=False)
+    option = db.Column(db.String(100), nullable=True)
     montant = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(200), nullable=True)
 
 class Eleve(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    matricule = db.Column(db.String(50), unique=True, nullable=False)
+    # Identité Élève
     nom_complet = db.Column(db.String(100), nullable=False)
-    section = db.Column(db.String(50), nullable=True)
+    sexe = db.Column(db.String(10), nullable=True)
+    date_naissance = db.Column(db.String(50), nullable=True)
+    lieu_naissance = db.Column(db.String(100), nullable=True)
+    adresse = db.Column(db.String(200), nullable=True)
+    # Responsable
+    nom_responsables = db.Column(db.String(100), nullable=False)
+    lien_parente = db.Column(db.String(50), nullable=True)
+    telephone_principal = db.Column(db.String(20), nullable=False)
+    telephone_secondaire = db.Column(db.String(20), nullable=True)
+    # Parcours
+    section = db.Column(db.String(50), nullable=False)
     classe = db.Column(db.String(50), nullable=False)
     option = db.Column(db.String(100), nullable=True)
-    matricule = db.Column(db.String(50), unique=True, nullable=False)
-    telephone_tuteur = db.Column(db.String(20), nullable=True)
     date_inscription = db.Column(db.String(50), nullable=False)
 
 class Paiement(db.Model):
@@ -82,28 +92,44 @@ def admin():
 @app.route('/inscription', methods=['GET', 'POST'])
 def inscription():
     frais_inscription = ConfigurationFrais.query.filter_by(type_frais='INSCRIPTION').first()
-    
+
     if request.method == 'POST':
         if not frais_inscription:
-            return "Erreur : Le frais d'inscription n'a pas été configuré par l'administrateur.", 400
+            return "Erreur : Le frais d'inscription doit d'abord être configuré dans l'Espace Admin.", 400
 
         nom = request.form.get('nom_complet')
+        sexe = request.form.get('sexe')
+        date_naiss = request.form.get('date_naissance')
+        lieu_naiss = request.form.get('lieu_naissance')
+        adresse = request.form.get('adresse')
+
+        responsable = request.form.get('nom_responsables')
+        lien = request.form.get('lien_parente')
+        tel1 = request.form.get('telephone_principal')
+        tel2 = request.form.get('telephone_secondaire')
+
         section = request.form.get('section')
         classe = request.form.get('classe')
-        option = request.form.get('option', '')
-        telephone = request.form.get('telephone_tuteur')
+        option = request.form.get('option', 'N/A')
+
         date_actuelle = datetime.now().strftime("%d/%m/%Y %H:%M")
-        
         count = Eleve.query.count() + 1
         matricule = f"CHAR-{datetime.now().year}-{count:03d}"
 
         nouvel_eleve = Eleve(
+            matricule=matricule,
             nom_complet=nom,
+            sexe=sexe,
+            date_naissance=date_naiss,
+            lieu_naissance=lieu_naiss,
+            adresse=adresse,
+            nom_responsables=responsable,
+            lien_parente=lien,
+            telephone_principal=tel1,
+            telephone_secondaire=tel2,
             section=section,
             classe=classe,
-            option=option,
-            matricule=matricule,
-            telephone_tuteur=telephone,
+            option=option if section in ['Secondaire', 'Humanités'] else 'N/A',
             date_inscription=date_actuelle
         )
         db.session.add(nouvel_eleve)
@@ -113,10 +139,10 @@ def inscription():
             date_heure=date_actuelle,
             eleve_id=nouvel_eleve.id,
             nom_eleve=nom,
-            classe=f"{classe} ({section})",
+            classe=f"{classe} - {section}",
             categorie_frais='INSCRIPTION',
             montant=frais_inscription.montant,
-            motif_detail="Frais d'inscription"
+            motif_detail="Frais d'inscription obligatoire"
         )
         db.session.add(paiement_ins)
         db.session.commit()
@@ -135,7 +161,7 @@ def paiements():
         eleve_id = request.form.get('eleve_id')
         if not eleve_id:
             return "Erreur : Veuillez sélectionner un élève inscrit.", 400
-            
+
         eleve = Eleve.query.get(eleve_id)
         categorie = request.form.get('categorie_frais')
         trimestre = request.form.get('trimestre')
@@ -179,11 +205,14 @@ def download_rapport(type_rapport):
 
     if type_rapport == 'inscription':
         ws.title = "Inscriptions"
-        ws.append(["N°", "Date & Heure", "Matricule", "Élève", "Section / Classe", "Montant Payé"])
+        ws.append(["N°", "Date & Heure", "Matricule", "Élève", "Section / Classe", "Tuteur", "Téléphone", "Montant Payé"])
         paiements = Paiement.query.filter_by(categorie_frais='INSCRIPTION').all()
         for p in paiements:
             e = Eleve.query.get(p.eleve_id)
-            ws.append([p.id, p.date_heure, e.matricule if e else '-', p.nom_eleve, p.classe, p.montant])
+            ws.append([
+                p.id, p.date_heure, e.matricule if e else '-', p.nom_eleve, p.classe,
+                e.nom_responsables if e else '-', e.telephone_principal if e else '-', p.montant
+            ])
 
     elif type_rapport == 'minerval':
         ws.title = "Minerval"
