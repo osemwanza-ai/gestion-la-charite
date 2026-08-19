@@ -3,15 +3,14 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
 
-# 1. INITIALISATION DE L'APPLICATION
+# --- 1. INITIALISATION DE L'APPLICATION ---
 app = Flask(__name__)
 app.secret_key = "cle_secrete_complexe_la_charite"
 
-# 2. CONFIGURATION DE LA BASE DE DONNÉES
+# --- 2. CONFIGURATION DE LA BASE DE DONNÉES ---
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
-    # Render donne une URL commençant par postgres:// qu'il faut corriger pour SQLAlchemy
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
@@ -23,7 +22,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# 3. MODÈLES DE DONNÉES
+# --- 3. MODÈLES DE DONNÉES ---
 class FraisInscription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     montant = db.Column(db.Float, nullable=False)
@@ -59,21 +58,24 @@ class Paiement(db.Model):
     date_paiement = db.Column(db.DateTime, default=datetime.utcnow)
     rubrique = db.relationship('RubriqueFrais')
 
-# 4. INITIALISATION SÉCURISÉE
+# --- 4. INITIALISATION SÉCURISÉE AU DÉMARRAGE ---
 with app.app_context():
     try:
         db.create_all()
     except Exception as e:
         print(f"Erreur initialisation DB : {e}")
 
-# 5. ROUTES
+# --- 5. ROUTES ET LOGIQUE METIER ---
+
 @app.route('/init-db')
 def init_db():
+    """Route pour réinitialiser la structure de la base PostgreSQL et appliquer les nouvelles colonnes"""
     try:
-        db.create_all()
-        return "✅ Base de données PostgreSQL initialisée avec succès ! <br><br><a href='/'>Aller à l'accueil</a>"
+        db.drop_all()   # Supprime l'ancienne table obsolète qui posait problème
+        db.create_all() # Recree proprement la table avec nom_complet
+        return "✅ Base de données PostgreSQL réinitialisée avec succès avec la nouvelle structure ! <br><br><a href='/'>Aller à l'accueil</a>"
     except Exception as e:
-        return f"❌ Impossible de créer les tables. Erreur : {str(e)}"
+        return f"❌ Erreur lors de la réinitialisation : {str(e)}"
 
 @app.route('/')
 def index():
@@ -81,15 +83,14 @@ def index():
         eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
         return render_template('index.html', eleves=eleves)
     except Exception as e:
-        # Si la base n'est pas encore accessible, on affiche un message clair au lieu d'une erreur 500
         return f"""
         <div style="padding: 30px; font-family: sans-serif;">
-            <h2 style="color: #dc2626;">⚠️ La base de données nécessite une initialisation</h2>
-            <p>L'application est en ligne mais les tables ne sont pas encore prêtes.</p>
-            <p><strong>Détail de l'erreur :</strong> {str(e)}</p>
+            <h2 style="color: #dc2626;">⚠️ La base de données nécessite une mise à jour</h2>
+            <p><strong>Raison :</strong> Les colonnes de la base ne correspondent pas au code actuel.</p>
+            <p><strong>Détail :</strong> {str(e)}</p>
             <br>
-            <a href="/init-db" style="padding: 10px 20px; background: #16a34a; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                👉 Cliquez ici pour créer les tables PostgreSQL
+            <a href="/init-db" style="padding: 12px 24px; background: #16a34a; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                👉 Cliquez ici pour corriger et réinitialiser les tables PostgreSQL
             </a>
         </div>
         """
