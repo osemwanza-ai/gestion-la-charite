@@ -104,6 +104,7 @@ def inscription():
             flash("⚠️ L'inscription est bloquée : les frais n'ont pas été configurés.", "danger")
             return redirect(url_for('inscription'))
 
+        # Génération dynamique du matricule (Format Ex: CH-2026-001)
         annee_en_cours = datetime.now().year
         dernier_eleve = Eleve.query.order_by(Eleve.id.desc()).first()
         suivant_id = (dernier_eleve.id + 1) if dernier_eleve else 1
@@ -195,18 +196,21 @@ def admin():
         
     return render_template('admin.html', frais_inscription=frais_inscription, rubriques=rubriques)
 
+# ROUTE DE PAIEMENT - Pointe vers paiement.html
+@app.route('/paiement', methods=['GET', 'POST'])
+@app.route('/paiement/<int:eleve_id>', methods=['GET', 'POST'])
 @app.route('/payer', methods=['GET', 'POST'])
 @app.route('/payer/<int:eleve_id>', methods=['GET', 'POST'])
-def payer(eleve_id=None):
+def paiement(eleve_id=None):
     eleves = Eleve.query.order_by(Eleve.nom_complet.asc()).all()
     eleve_selectionne = Eleve.query.get(eleve_id) if eleve_id else None
     rubriques = RubriqueFrais.query.all()
     
     if request.method == 'POST':
-        if not eleve_selectionne:
-            selected_id = request.form.get('eleve_id')
-            if selected_id:
-                return redirect(url_for('payer', eleve_id=selected_id))
+        # Si la sélection de l'élève vient de changer dans le menu déroulant
+        selected_id = request.form.get('eleve_id')
+        if selected_id and not request.form.get('rubrique_id'):
+            return redirect(url_for('paiement', eleve_id=selected_id))
 
         if eleve_selectionne:
             rubrique_id = request.form.get('rubrique_id')
@@ -227,11 +231,11 @@ def payer(eleve_id=None):
 
             if reste_a_payer <= 0:
                 flash(f"⚠️ Le solde pour {rubrique.nom} ({trimestre}) est déjà apuré.", "danger")
-                return redirect(url_for('payer', eleve_id=eleve_selectionne.id))
+                return redirect(url_for('paiement', eleve_id=eleve_selectionne.id))
 
             if montant_verse > reste_a_payer:
                 flash(f"⚠️ Le montant dépasse le solde du {trimestre} ({reste_a_payer:,.0f} FC restant).", "warning")
-                return redirect(url_for('payer', eleve_id=eleve_selectionne.id))
+                return redirect(url_for('paiement', eleve_id=eleve_selectionne.id))
 
             nouveau_paiement = Paiement(
                 eleve_id=eleve_selectionne.id,
@@ -246,8 +250,9 @@ def payer(eleve_id=None):
             flash(f"✅ Paiement de {montant_verse:,.0f} FC enregistré pour {eleve_selectionne.nom_complet}.", "success")
             return redirect(url_for('rapports'))
 
-    return render_template('payer.html', eleve=eleve_selectionne, eleves=eleves, rubriques=rubriques)
+    return render_template('paiement.html', eleve=eleve_selectionne, eleves=eleves, rubriques=rubriques)
 
+# ROUTE POUR LES RAPPORTS COMPTABLES
 @app.route('/rapports')
 def rapports():
     type_rapport = request.args.get('type', 'tous')
