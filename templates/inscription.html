@@ -10,23 +10,21 @@
 <body class="bg-light">
 
 <div class="container py-4">
-    <div class="mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
             <i class="fa-solid fa-arrow-left me-1"></i> Retour au tableau de bord
         </a>
     </div>
 
-    <h2 class="fw-bold text-success mb-4">Fiche d'Inscription de l'Élève</h2>
-
-    <!-- Alerte de blocage dynamique -->
+    <!-- Message de blocage si frais non paramétré -->
     {% if not frais_inscription %}
     <div class="alert alert-danger shadow-sm border-0 mb-4" role="alert">
         <div class="d-flex align-items-center">
             <i class="fa-solid fa-triangle-exclamation fs-3 me-3"></i>
             <div>
-                <strong>Blocage :</strong> Le frais d'inscription n'a pas encore été configuré dans l'espace Administrateur.
+                <strong>Blocage :</strong> Le frais d'inscription n'a pas encore été configuré dans l'espace Administrateur. Veuillez le paramétrer avant d'inscrire un élève.
                 <a href="{{ url_for('admin') }}" class="btn btn-sm btn-danger ms-3">
-                    <i class="fa-solid fa-gear me-1"></i> Configurer maintenant dans l'Admin
+                    <i class="fa-solid fa-gear me-1"></i> Paramétrer dans l'Admin
                 </a>
             </div>
         </div>
@@ -39,9 +37,12 @@
     {% endif %}
 
     <div class="card border-0 shadow-sm p-4">
-        <form method="POST" action="{{ url_for('inscription') }}">
+        <h3 class="fw-bold text-success mb-4">Fiche d'Inscription de l'Élève</h3>
+
+        <form method="POST" action="{{ url_for('inscription') }}" id="formInscription">
             <fieldset {% if not frais_inscription %}disabled{% endif %}>
                 
+                <!-- 1. IDENTITÉ DE L'ÉLÈVE -->
                 <h5 class="fw-bold text-primary mb-3"><span class="border-start border-4 border-primary ps-2">1. Identité de l'Élève</span></h5>
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
@@ -57,24 +58,26 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label fw-bold">Date de Naissance</label>
-                        <input type="date" name="date_naissance" class="form-control">
+                        <label class="form-label fw-bold">Date de Naissance *</label>
+                        <input type="date" name="date_naissance" id="date_naissance" class="form-control" required onchange="verifierAge()">
+                        <small id="ageHelp" class="form-text text-muted"></small>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-bold">Lieu de Naissance</label>
-                        <input type="text" name="lieu_naissance" class="form-control" placeholder="Ex: Kinshasa">
+                        <label class="form-label fw-bold">Lieu de Naissance *</label>
+                        <input type="text" name="lieu_naissance" class="form-control" required placeholder="Ex: Kinshasa">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-bold">Adresse Résidentielle</label>
-                        <input type="text" name="adresse" class="form-control" placeholder="Avenue, Quartier, Commune">
+                        <label class="form-label fw-bold">Adresse Résidentielle *</label>
+                        <input type="text" name="adresse" class="form-control" required placeholder="Avenue, Quartier, Commune">
                     </div>
                 </div>
 
+                <!-- 2. AFFECTATION SCOLAIRE -->
                 <h5 class="fw-bold text-primary mb-3"><span class="border-start border-4 border-primary ps-2">2. Affectation Scolaire</span></h5>
                 <div class="row g-3 mb-4">
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Section *</label>
-                        <select name="section" class="form-select" required>
+                        <select name="section" id="sectionSelect" class="form-select" required onchange="gererSection()">
                             <option value="">Sélectionner...</option>
                             <option value="Maternelle">Maternelle</option>
                             <option value="Primaire">Primaire</option>
@@ -83,14 +86,16 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Classe *</label>
-                        <input type="text" name="classe" class="form-control" placeholder="Ex: 1ère Année" required>
+                        <input type="text" name="classe" class="form-control" placeholder="Ex: 1ère Année, 3ème" required>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-bold">Option (si secondaire)</label>
-                        <input type="text" name="option" class="form-control" placeholder="Ex: Scientifique, Commerciale">
+                        <label class="form-label fw-bold" id="labelOption">Option <span id="asterisqueOption" class="text-danger d-none">*</span></label>
+                        <input type="text" name="option" id="optionInput" class="form-control" placeholder="Ex: Scientifique, Commerciale">
+                        <small id="optionHelp" class="form-text text-muted">Obligatoire uniquement pour le Secondaire.</small>
                     </div>
                 </div>
 
+                <!-- 3. RESPONSABLE LÉGAL -->
                 <h5 class="fw-bold text-primary mb-3"><span class="border-start border-4 border-primary ps-2">3. Responsable Légal</span></h5>
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
@@ -98,8 +103,13 @@
                         <input type="text" name="nom_responsables" class="form-control" required placeholder="Nom du père ou de la mère">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-bold">Lien de Parenté</label>
-                        <input type="text" name="lien_parente" class="form-control" placeholder="Père, Mère, Tuteur">
+                        <label class="form-label fw-bold">Lien de Parenté *</label>
+                        <select name="lien_parente" class="form-select" required>
+                            <option value="">Sélectionner...</option>
+                            <option value="Père">Père</option>
+                            <option value="Mère">Mère</option>
+                            <option value="Tuteur">Tuteur / Tutrice</option>
+                        </select>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Téléphone Principal *</label>
@@ -119,6 +129,55 @@
         </form>
     </div>
 </div>
+
+<script>
+function gererSection() {
+    const section = document.getElementById('sectionSelect').value;
+    const optionInput = document.getElementById('optionInput');
+    const asterisqueOption = document.getElementById('asterisqueOption');
+    
+    if (section === 'Secondaire') {
+        optionInput.required = true;
+        asterisqueOption.classList.remove('d-none');
+        optionInput.placeholder = "Ex: Scientifique, Littéraire, Commerciale";
+    } else {
+        optionInput.required = false;
+        asterisqueOption.classList.add('d-none');
+        optionInput.value = "";
+        optionInput.placeholder = "Non applicable";
+    }
+    verifierAge();
+}
+
+function verifierAge() {
+    const dateNaiss = document.getElementById('date_naissance').value;
+    const section = document.getElementById('sectionSelect').value;
+    const ageHelp = document.getElementById('ageHelp');
+
+    if (!dateNaiss) return;
+
+    const birthDate = new Date(dateNaiss);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+
+    ageHelp.innerText = "Âge : " + age + " an(s)";
+
+    // Exemples d'avertissements selon la section choisie
+    if (section === 'Maternelle' && (age < 3 || age > 6)) {
+        ageHelp.className = "form-text text-danger fw-bold";
+        ageHelp.innerText += " - Attention: Âge inhabituel pour la Maternelle (3-5 ans recommandés).";
+    } else if (section === 'Primaire' && (age < 5 || age > 14)) {
+        ageHelp.className = "form-text text-warning fw-bold";
+        ageHelp.innerText += " - Vérifier la section pour cet âge.";
+    } else {
+        ageHelp.className = "form-text text-success fw-bold";
+    }
+}
+</script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 </body>
