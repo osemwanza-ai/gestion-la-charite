@@ -43,7 +43,7 @@
                     </div>
                 </div>
 
-                <!-- 2. AFFECTATION SCOLAIRE (SÉLECTEURS DYNAMIQUES ET RESTRICTIFS) -->
+                <!-- 2. AFFECTATION SCOLAIRE (SÉLECTEURS DYNAMIQUES) -->
                 <h5 class="text-secondary border-bottom pb-2 mb-3"><i class="fa-solid fa-graduation-cap me-2"></i>2. Affectation Scolaire</h5>
                 <div class="row g-3 mb-4">
                     <div class="col-md-4">
@@ -67,9 +67,9 @@
                         <select name="option" id="selectOption" class="form-select">
                             <option value="" disabled selected>Sélectionner l'option...</option>
                             <option value="Scientifique">Scientifique</option>
-                            <option value="Littéraire">Littéraire / Pedagogie</option>
+                            <option value="Littéraire">Littéraire / Pédagogie</option>
                             <option value="Commerciale & Gestion">Commerciale & Gestion</option>
-                            <option value="Technique / Electricité">Technique / Électricité</option>
+                            <option value="Technique / Électricité">Technique / Électricité</option>
                             <option value="Coupe et Couture">Coupe et Couture</option>
                         </select>
                     </div>
@@ -149,22 +149,42 @@
                     </div>
                 </div>
 
-                <!-- RECAPITULATIF RECEPTION FRAIS D'INSCRIPTION -->
+                <!-- VÉRIFICATION DE LA CONFIGURATION DES FRAIS D'INSCRIPTION -->
                 {% if frais_inscription %}
-                <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
-                    <i class="fa-solid fa-circle-info fa-2x me-3"></i>
-                    <div>
-                        <strong>Frais d'inscription configurés :</strong> L'inscription générera automatiquement un paiement de <strong>{{ "%.2f"|format(frais_inscription.montant) }} $</strong> au nom de l'élève.
+                    <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
+                        <i class="fa-solid fa-circle-check fa-2x me-3"></i>
+                        <div>
+                            <strong>Frais d'inscription configurés :</strong> L'inscription générera automatiquement un paiement obligatoire de <strong>{{ "%.2f"|format(frais_inscription.montant) }} $</strong> au nom de l'élève.
+                        </div>
                     </div>
-                </div>
-                {% endif %}
 
-                <!-- BOUTON DE SOUMISSION -->
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary btn-lg fw-bold">
-                        <i class="fa-solid fa-check-circle me-2"></i>Valider et Enregistrer l'Élève
-                    </button>
-                </div>
+                    <!-- BOUTON ACTIF -->
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg fw-bold">
+                            <i class="fa-solid fa-check-circle me-2"></i>Valider et Enregistrer l'Élève
+                        </button>
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+                        <i class="fa-solid fa-triangle-exclamation fa-2x me-3"></i>
+                        <div>
+                            <strong>Action requise :</strong> Les frais d'inscription n'ont pas encore été définis dans la tarification. 
+                            Vous devez d'abord ajouter la rubrique <strong>"Frais d'inscription"</strong> dans la gestion des tarifs avant de pouvoir inscrire un élève.
+                            <div class="mt-2">
+                                <a href="{{ url_for('gestion_frais') }}" class="btn btn-outline-danger btn-sm fw-bold">
+                                    <i class="fa-solid fa-coins me-1"></i> Configurer la tarification maintenant
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BOUTON DÉSACTIVÉ -->
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-secondary btn-lg fw-bold" disabled>
+                            <i class="fa-solid fa-lock me-2"></i>Inscription bloquée (Frais non définis)
+                        </button>
+                    </div>
+                {% endif %}
 
             </form>
         </div>
@@ -182,7 +202,7 @@
 
         const section = selectSection.value;
 
-        // Vider le menu des classes
+        // Réinitialiser le menu des classes
         selectClasse.innerHTML = '';
         selectClasse.disabled = false;
 
@@ -211,7 +231,7 @@
             selectOption.required = false;
             selectOption.value = '';
 
-        } else if (section === 'EB') { // Éducation de base (7e et 8e)
+        } else if (section === 'EB') { // Éducation de Base
             optionsClasses = [
                 { val: '7ème EB', text: '7ème Année (Éducation de Base)' },
                 { val: '8ème EB', text: '8ème Année (Éducation de Base)' }
@@ -227,12 +247,11 @@
                 { val: '3ème Humanités', text: '3ème Humanités (5ème Secondaire)' },
                 { val: '4ème Humanités', text: '4ème Humanités (6ème Secondaire)' }
             ];
-            // Afficher et exiger la sélection d'une option pour les Humanités
             blocOption.style.display = 'block';
             selectOption.required = true;
         }
 
-        // Ajouter l'option par défaut
+        // Option par défaut
         const defaultOpt = document.createElement('option');
         defaultOpt.value = '';
         defaultOpt.textContent = 'Sélectionner la classe...';
@@ -240,7 +259,7 @@
         defaultOpt.selected = true;
         selectClasse.appendChild(defaultOpt);
 
-        // Injecter les classes autorisées
+        // Remplir les classes autorisées
         optionsClasses.forEach(item => {
             const opt = document.createElement('option');
             opt.value = item.val;
