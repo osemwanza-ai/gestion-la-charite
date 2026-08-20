@@ -13,7 +13,7 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label font-weight-bold">1. Sélectionner l'Élève *</label>
-                        <select name="eleve_id" id="eleve_select" class="form-select" required onchange="updateRubriques()">
+                        <select name="eleve_id" id="eleve_select" class="form-select" required onchange="updateMontantInfo()">
                             <option value="" selected disabled>-- Choisir un élève --</option>
                             {% for el in eleves %}
                                 <option value="{{ el.id }}">{{ el.matricule }} - {{ el.nom_complet }} ({{ el.classe }})</option>
@@ -22,9 +22,9 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label font-weight-bold">2. Rubrique à Payée *</label>
+                        <label class="form-label font-weight-bold">2. Rubrique à Payer *</label>
                         <select name="rubrique_id" id="rubrique_select" class="form-select" required onchange="updateMontantInfo()">
-                            <option value="" selected disabled>-- Sélectionner d'abord un élève --</option>
+                            <option value="" selected disabled>-- Sélectionner une rubrique --</option>
                             {% for rub in rubriques %}
                                 <option value="{{ rub.id }}" data-tarif="{{ rub.montant }}">
                                     {{ rub.nom }} (Tarif : {{ rub.montant }} $)
@@ -114,12 +114,7 @@
 </div>
 
 <script>
-// Modification sécurisée de l'analyse JSON
 const soldesData = JSON.parse('{{ soldes|safe }}');
-
-function updateRubriques() {
-    updateMontantInfo();
-}
 
 function updateMontantInfo() {
     const eleveId = document.getElementById('eleve_select').value;
@@ -127,9 +122,9 @@ function updateMontantInfo() {
     const rubriqueId = rubriqueSelect.value;
     const infoBox = document.getElementById('solde_info_box');
 
-    if (eleveId && rubriqueId) {
+    if (eleveId && rubriqueId && soldesData[eleveId] && soldesData[eleveId][rubriqueId]) {
         const tarif = parseFloat(rubriqueSelect.options[rubriqueSelect.selectedIndex].getAttribute('data-tarif'));
-        const info = soldesData[eleveId][rubriqueId] || {paye: 0, reste: tarif};
+        const info = soldesData[eleveId][rubriqueId];
 
         document.getElementById('lbl_tarif').innerText = tarif.toFixed(2);
         document.getElementById('lbl_paye').innerText = info.paye.toFixed(2);
