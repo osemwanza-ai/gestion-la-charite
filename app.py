@@ -10,7 +10,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# ==================== MODÈLES DE BASE DE DONNÉES ====================
+# ==================== MODÈLES ====================
 
 class ConfigurationQuota(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -65,7 +65,7 @@ class Paiement(db.Model):
     date_paiement = db.Column(db.DateTime, default=datetime.utcnow)
     rubrique = db.relationship('RubriqueFrais')
 
-# ==================== ROUTES PRINCIPALES ====================
+# ==================== ROUTES ====================
 
 @app.route('/')
 def index():
@@ -90,6 +90,10 @@ def admin_frais():
         est_minerval = 'est_minerval' in request.form
         est_inscription = 'est_inscription' in request.form
         
+        # Si la nouvelle rubrique devient le frais d'inscription par défaut, décochez les anciennes
+        if est_inscription:
+            RubriqueFrais.query.filter_by(est_inscription=True).update({'est_inscription': False})
+
         nouvelle_rubrique = RubriqueFrais(
             nom=nom, 
             montant_cdf=montant_cdf,
@@ -106,9 +110,38 @@ def admin_frais():
     rubriques = RubriqueFrais.query.all()
     return render_template('admin.html', rubriques=rubriques, frais=rubriques)
 
-# Alias de sécurité si Jinja appelle url_for('admin')
 def admin():
     return admin_frais()
+
+# Route pour MODIFIER une rubrique
+@app.route('/modifier_rubrique/<int:id>', methods=['POST'])
+def modifier_rubrique(id):
+    rubrique = RubriqueFrais.query.get_or_404(id)
+    rubrique.nom = request.form.get('nom')
+    montant_val = float(request.form.get('montant_cdf', 0))
+    rubrique.montant_cdf = montant_val
+    rubrique.montant = montant_val
+    rubrique.description = request.form.get('description')
+    
+    est_inscr = 'est_inscription' in request.form
+    if est_inscr and not rubrique.est_inscription:
+        RubriqueFrais.query.filter_by(est_inscription=True).update({'est_inscription': False})
+    
+    rubrique.est_inscription = est_inscr
+    rubrique.est_minerval = 'est_minerval' in request.form
+    
+    db.session.commit()
+    flash(f'Rubrique "{rubrique.nom}" mise à jour avec succès !', 'success')
+    return redirect(url_for('admin_frais'))
+
+# Route pour SUPPRIMER une rubrique
+@app.route('/supprimer_rubrique/<int:id>', methods=['POST'])
+def supprimer_rubrique(id):
+    rubrique = RubriqueFrais.query.get_or_404(id)
+    db.session.delete(rubrique)
+    db.session.commit()
+    flash('Rubrique supprimée avec succès !', 'info')
+    return redirect(url_for('admin_frais'))
 
 @app.route('/inscriptions', methods=['GET', 'POST'])
 @app.route('/inscription', methods=['GET', 'POST'])
@@ -163,7 +196,6 @@ def inscriptions():
     eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
     return render_template('inscription.html', eleves=eleves, rubrique_inscr=rubrique_inscr, rubrique=rubrique_inscr)
 
-# Alias de sécurité si Jinja appelle url_for('inscription')
 def inscription():
     return inscriptions()
 
