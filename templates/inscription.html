@@ -9,7 +9,7 @@
 </head>
 <body class="bg-light">
 
-    <!-- Navbar -->
+    <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
         <div class="container">
             <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">CS LA CHARITÉ</a>
@@ -30,7 +30,7 @@
 
     <div class="container pb-5">
         
-        <!-- Flash messages -->
+        <!-- Messages Flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -44,131 +44,253 @@
 
         <div class="row g-4">
             
-            <!-- Formulaire d'inscription -->
-            <div class="col-lg-5">
+            <!-- Formulaire d'inscription complet -->
+            <div class="col-lg-7">
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white py-3">
-                        <h5 class="card-title mb-0 fw-bold text-primary"><i class="bi bi-person-plus-fill me-2"></i>Nouvel Élève</h5>
+                        <h5 class="card-title mb-0 fw-bold text-primary">
+                            <i class="bi bi-file-earmark-person me-2"></i>Fiche de Renseignement & d'Inscription
+                        </h5>
                     </div>
                     <div class="card-body">
-                        <form action="{{ url_for('inscriptions') }}" method="POST">
+                        <form action="{{ url_for('inscriptions') }}" method="POST" id="formInscription">
                             
-                            <!-- Identité -->
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Nom complet</label>
-                                <input type="text" name="nom_complet" class="form-control" required placeholder="Nom, Postnom, Prénom">
-                            </div>
-
-                            <div class="row g-2 mb-3">
-                                <div class="col-6">
-                                    <label class="form-label fw-semibold">Sexe</label>
-                                    <select name="sexe" class="form-select" required>
-                                        <option value="M">Masculin (M)</option>
-                                        <option value="F">Féminin (F)</option>
-                                    </select>
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label fw-semibold">Date Naissance</label>
-                                    <input type="date" name="date_naissance" class="form-control">
-                                </div>
-                            </div>
-
-                            <!-- Affectation Scolaire -->
-                            <div class="row g-2 mb-3">
-                                <div class="col-4">
-                                    <label class="form-label fw-semibold">Section</label>
-                                    <select name="section" class="form-select" required>
-                                        <option value="Maternelle">Maternelle</option>
-                                        <option value="Primaire">Primaire</option>
-                                        <option value="Secondaire">Secondaire</option>
-                                    </select>
-                                </div>
-                                <div class="col-4">
-                                    <label class="form-label fw-semibold">Classe</label>
-                                    <input type="text" name="classe" class="form-control" placeholder="ex: 1ère" required>
-                                </div>
-                                <div class="col-4">
-                                    <label class="form-label fw-semibold">Option</label>
-                                    <input type="text" name="option" class="form-control" placeholder="ex: Math-Info">
-                                </div>
-                            </div>
-
-                            <!-- Parents & Contacts -->
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Nom du Père / Téléphone</label>
-                                <div class="input-group mb-2">
-                                    <input type="text" name="nom_pere" class="form-control" placeholder="Nom du père">
-                                    <input type="text" name="tel_pere" class="form-control" placeholder="Tél père">
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Nom de la Mère / Téléphone</label>
-                                <div class="input-group mb-2">
-                                    <input type="text" name="nom_mere" class="form-control" placeholder="Nom de la mère">
-                                    <input type="text" name="tel_mere" class="form-control" placeholder="Tél mère">
+                            <!-- 1. Identité Élève -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-person me-1"></i>1. Identité de l'Élève</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-8 mb-2">
+                                        <label class="form-label small fw-semibold">Nom complet (Nom, Post-nom, Prénom) *</label>
+                                        <input type="text" name="nom_complet" class="form-control" required placeholder="ex: KABAMBA MUKENDI Joseph">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small fw-semibold">Sexe *</label>
+                                        <select name="sexe" class="form-select" required>
+                                            <option value="">Choisir...</option>
+                                            <option value="Masculin">Masculin</option>
+                                            <option value="Féminin">Féminin</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small fw-semibold">Date de naissance</label>
+                                        <input type="date" name="date_naissance" class="form-control">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small fw-semibold">Lieu de naissance</label>
+                                        <input type="text" name="lieu_naissance" class="form-control" placeholder="Kinshasa">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small fw-semibold">Nationalité</label>
+                                        <input type="text" name="nationalite" class="form-control" value="Congolaise">
+                                    </div>
+                                    <div class="col-md-12 mb-2">
+                                        <label class="form-label small fw-semibold">Adresse résidentielle</label>
+                                        <input type="text" name="adresse" class="form-control" placeholder="Avenue, Quartier, Commune">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small fw-semibold">Groupe Sanguin</label>
+                                        <select name="groupe_sanguin" class="form-select">
+                                            <option value="">Inconnu</option>
+                                            <option value="A+">A+</option>
+                                            <option value="A-">A-</option>
+                                            <option value="B+">B+</option>
+                                            <option value="B-">B-</option>
+                                            <option value="AB+">AB+</option>
+                                            <option value="AB-">AB-</option>
+                                            <option value="O+">O+</option>
+                                            <option value="O-">O-</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-8 mb-2">
+                                        <label class="form-label small fw-semibold">Allergies / Antécédents médicaux</label>
+                                        <input type="text" name="allergies_sante" class="form-control" placeholder="Aucun ou précisions...">
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Frais auto -->
-                            {% set val_rubrique = rubrique_inscr if rubrique_inscr is defined else rubrique %}
-                            {% if val_rubrique %}
-                                <div class="alert alert-info py-2 mb-3 small">
-                                    <i class="bi bi-info-circle me-1"></i> Frais d'inscription inclus : 
-                                    <strong>
-                                        {% if val_rubrique.montant_cdf is defined and val_rubrique.montant_cdf %}
-                                            {{ "{:,.0f}".format(val_rubrique.montant_cdf) }} CDF
-                                        {% else %}
-                                            {{ "{:,.0f}".format(val_rubrique.montant or 0) }} CDF
-                                        {% endif %}
-                                    </strong>
+                            <!-- 2. Choix de la Scolarité (Dynamique) -->
+                            <div class="border-bottom pb-3 mb-3 bg-light p-3 rounded">
+                                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-journal-bookmark me-1"></i>2. Affectation Scolaire</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small fw-semibold">Section *</label>
+                                        <select name="section" id="sectionSelect" class="form-select" required onchange="adapterFormulaireScolaire()">
+                                            <option value="">Choisir la section...</option>
+                                            <option value="Maternelle">Maternelle (3-5 ans)</option>
+                                            <option value="Primaire">Primaire</option>
+                                            <option value="Secondaire">Secondaire (Base)</option>
+                                            <option value="Humanité">Humanité</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small fw-semibold">Classe *</label>
+                                        <select name="classe" id="classeSelect" class="form-select" required disabled>
+                                            <option value="">Sélectionner d'abord la section</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 mb-2" id="optionContainer" style="display: none;">
+                                        <label class="form-label small fw-semibold text-danger">Option * (Obligatoire)</label>
+                                        <select name="option" id="optionSelect" class="form-select">
+                                            <option value="">Choisir l'option...</option>
+                                            <option value="Scientifique">Scientifique</option>
+                                            <option value="Pédagogie Générale">Pédagogie Générale</option>
+                                            <option value="Coupe & Couture">Coupe & Couture</option>
+                                            <option value="Électricité">Électricité</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. Parcours Précédent -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-clock-history me-1"></i>3. Parcours Précédent</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-8 mb-2">
+                                        <label class="form-label small fw-semibold">École de provenance</label>
+                                        <input type="text" name="ecole_provenance" class="form-control" placeholder="Nom du dernier établissement">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small fw-semibold">Pourcentage / Résultat</label>
+                                        <input type="text" name="pourcentage_obtenu" class="form-control" placeholder="ex: 65%">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 4. Tuteurs (Père & Mère) -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-people me-1"></i>4. Informations des Parents / Tuteurs</h6>
+                                
+                                <div class="fw-bold text-secondary small mb-2">Père (Tuteur 1)</div>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label small">Nom complet du père</label>
+                                        <input type="text" name="nom_pere" class="form-control" placeholder="Nom du père">
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label small">Profession / Employeur</label>
+                                        <input type="text" name="prof_pere" class="form-control">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small">Tél Principal</label>
+                                        <input type="tel" name="tel_pere" class="form-control" placeholder="081...">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small">Tél WhatsApp</label>
+                                        <input type="tel" name="tel_pere_wa" class="form-control">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small">E-mail</label>
+                                        <input type="email" name="email_pere" class="form-control">
+                                    </div>
+                                </div>
+
+                                <div class="fw-bold text-secondary small mb-2">Mère (Tuteur 2)</div>
+                                <div class="row g-2">
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label small">Nom complet de la mère</label>
+                                        <input type="text" name="nom_mere" class="form-control" placeholder="Nom de la mère">
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label small">Profession / Employeur</label>
+                                        <input type="text" name="prof_mere" class="form-control">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small">Tél Principal</label>
+                                        <input type="tel" name="tel_mere" class="form-control" placeholder="082...">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small">Tél WhatsApp</label>
+                                        <input type="tel" name="tel_mere_wa" class="form-control">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small">E-mail</label>
+                                        <input type="email" name="email_mere" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 5. Prise en Charge & Urgence -->
+                            <div class="mb-4">
+                                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-telephone-outbound me-1"></i>5. Urgence & Responsable Financier</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small fw-semibold">Urgence : Nom de la personne</label>
+                                        <input type="text" name="contact_urgence_nom" class="form-control">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small fw-semibold">Lien de parenté</label>
+                                        <input type="text" name="contact_urgence_lien" class="form-control" placeholder="Oncle, Tante...">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small fw-semibold">Téléphone Urgence</label>
+                                        <input type="tel" name="contact_urgence_tel" class="form-control">
+                                    </div>
+                                    <div class="col-md-12 mb-2">
+                                        <label class="form-label small fw-semibold">Responsable financier de l'élève</label>
+                                        <select name="responsable_financier" class="form-select">
+                                            <option value="Père">Le Père</option>
+                                            <option value="Mère">La Mère</option>
+                                            <option value="Autre Tuteur">Un autre tuteur légal</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if rubrique_inscr %}
+                                <div class="alert alert-info py-2 small d-flex align-items-center">
+                                    <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                                    <div>Un reçu de frais d'inscription de <strong>{{ "{:,.0f}".format(rubrique_inscr.montant_cdf) }} CDF</strong> sera généré automatiquement.</div>
                                 </div>
                             {% endif %}
 
                             <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
-                                <i class="bi bi-check-circle me-1"></i> Inscrire l'élève
+                                <i class="bi bi-check-circle me-1"></i> Valider et Enregistrer l'Inscription
                             </button>
                         </form>
                     </div>
                 </div>
             </div>
 
-            <!-- Liste des inscrits -->
-            <div class="col-lg-7">
+            <!-- Liste des Élèves Inscrits -->
+            <div class="col-lg-5">
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white py-3">
-                        <h5 class="card-title mb-0 fw-bold text-primary"><i class="bi bi-people me-2"></i>Élèves Inscrits</h5>
+                        <h5 class="card-title mb-0 fw-bold text-primary"><i class="bi bi-people-fill me-2"></i>Dernières Inscriptions</h5>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Matricule</th>
-                                        <th>Nom Complet</th>
-                                        <th>Sexe</th>
-                                        <th>Classe / Option</th>
+                                        <th>Matricule & Élève</th>
+                                        <th>Affectation</th>
+                                        <th>Date</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% if eleves %}
                                         {% for e in eleves %}
                                             <tr>
-                                                <td class="fw-bold text-secondary">{{ e.matricule }}</td>
-                                                <td class="fw-bold">{{ e.nom_complet }}</td>
-                                                <td>{{ e.sexe }}</td>
                                                 <td>
-                                                    <span class="badge bg-light text-dark border">
-                                                        {{ e.classe }} {{ e.section }} {{ e.option or '' }}
-                                                    </span>
+                                                    <span class="badge bg-secondary mb-1">{{ e.matricule }}</span>
+                                                    <div class="fw-bold">{{ e.nom_complet }}</div>
+                                                    <small class="text-muted">{{ e.sexe }}</small>
+                                                </td>
+                                                <td>
+                                                    <div class="fw-semibold text-primary">{{ e.section }}</div>
+                                                    <small class="d-block">{{ e.classe }}</small>
+                                                    {% if e.option %}
+                                                        <span class="badge bg-info text-dark">{{ e.option }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="small text-muted">
+                                                    {{ e.date_inscription.strftime('%d/%m/%Y') }}
                                                 </td>
                                             </tr>
                                         {% endfor %}
                                     {% else %}
                                         <tr>
-                                            <td colspan="4" class="text-center py-4 text-muted">
-                                                Aucun élève inscrit pour le moment.
-                                            </td>
+                                            <td colspan="3" class="text-center py-4 text-muted">Aucune inscription enregistrée.</td>
                                         </tr>
                                     {% endif %}
                                 </tbody>
@@ -180,6 +302,63 @@
 
         </div>
     </div>
+
+    <!-- Script JavaScript de gestion dynamique des contraintes de section, classe et option -->
+    <script>
+        function adapterFormulaireScolaire() {
+            const section = document.getElementById('sectionSelect').value;
+            const classeSelect = document.getElementById('classeSelect');
+            const optionContainer = document.getElementById('optionContainer');
+            const optionSelect = document.getElementById('optionSelect');
+
+            classeSelect.innerHTML = '<option value="">Choisir la classe...</option>';
+            classeSelect.disabled = false;
+
+            if (section === 'Maternelle') {
+                const classes = ['1ère Maternelle', '2ème Maternelle', '3ème Maternelle'];
+                classes.forEach(c => classeSelect.add(new Option(c, c)));
+                
+                optionContainer.style.display = 'none';
+                optionSelect.required = false;
+                optionSelect.value = '';
+
+            } else if (section === 'Primaire') {
+                const classes = [
+                    '1ère A', '1ère B', 
+                    '2ème A', '2ème B', 
+                    '3ème Primaire', '4ème Primaire', 
+                    '5ème Primaire', '6ème Primaire'
+                ];
+                classes.forEach(c => classeSelect.add(new Option(c, c)));
+                
+                optionContainer.style.display = 'none';
+                optionSelect.required = false;
+                optionSelect.value = '';
+
+            } else if (section === 'Secondaire') {
+                const classes = ['7ème A', '7ème B', '8ème'];
+                classes.forEach(c => classeSelect.add(new Option(c, c)));
+                
+                optionContainer.style.display = 'none';
+                optionSelect.required = false;
+                optionSelect.value = '';
+
+            } else if (section === 'Humanité') {
+                const classes = ['1ère Humanité', '2ème Humanité', '3ème Humanité', '4ème Humanité'];
+                classes.forEach(c => classeSelect.add(new Option(c, c)));
+                
+                optionContainer.style.display = 'block';
+                optionSelect.required = true; // Contrainte dynamique client
+
+            } else {
+                classeSelect.disabled = true;
+                classeSelect.innerHTML = '<option value="">Sélectionner d\'abord la section</option>';
+                optionContainer.style.display = 'none';
+                optionSelect.required = false;
+                optionSelect.value = '';
+            }
+        }
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
