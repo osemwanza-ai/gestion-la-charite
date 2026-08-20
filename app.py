@@ -109,11 +109,11 @@ def admin_frais():
         return redirect(url_for('admin_frais'))
         
     rubriques = RubriqueFrais.query.all()
-    return render_template('admin_frais.html', rubriques=rubriques)
+    # Utilisation de votre fichier admin.html
+    return render_template('admin.html', rubriques=rubriques)
 
 @app.route('/inscriptions', methods=['GET', 'POST'])
 def inscriptions():
-    # Vérification si la rubrique "Inscription" a été créée
     rubrique_inscr = RubriqueFrais.query.filter_by(est_inscription=True).first()
     
     if request.method == 'POST':
@@ -165,7 +165,8 @@ def inscriptions():
         return redirect(url_for('inscriptions'))
         
     eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
-    return render_template('inscriptions.html', eleves=eleves, rubrique_inscr=rubrique_inscr)
+    # Utilisation de votre fichier inscription.html (sans s)
+    return render_template('inscription.html', eleves=eleves, rubrique_inscr=rubrique_inscr)
 
 @app.route('/paiements', methods=['GET', 'POST'])
 def paiements():
@@ -196,28 +197,6 @@ def paiements():
     
     return render_template('paiements.html', eleves=eleves, rubriques=rubriques, paiements=historique_paiements)
 
-@app.route('/eleve/<int:id>', methods=['GET', 'POST'])
-def eleve_detail(id):
-    eleve = Eleve.query.get_or_404(id)
-    if request.method == 'POST':
-        # Modification des données de l'élève par l'Admin
-        eleve.nom_complet = request.form.get('nom_complet')
-        eleve.sexe = request.form.get('sexe')
-        eleve.section = request.form.get('section')
-        eleve.classe = request.form.get('classe')
-        eleve.option = request.form.get('option')
-        eleve.tel_pere = request.form.get('tel_pere')
-        eleve.tel_mere = request.form.get('tel_mere')
-        eleve.adresse = request.form.get('adresse')
-        db.session.commit()
-        flash('Fiche élève mise à jour avec succès.', 'success')
-        return redirect(url_for('eleve_detail', id=eleve.id))
-        
-    paiements = Paiement.query.filter_by(eleve_id=eleve.id).all()
-    total_paye = sum(p.montant_paye_cdf for p in paiements)
-    
-    return render_template('eleve_detail.html', eleve=eleve, paiements=paiements, total_paye=total_paye)
-
 @app.route('/comptabilite', methods=['GET', 'POST'])
 def comptabilite():
     config = ConfigurationQuota.query.first()
@@ -227,7 +206,6 @@ def comptabilite():
         db.session.commit()
         
     if request.method == 'POST':
-        # Modification des quotas par l'Admin
         config.pct_salaires = float(request.form.get('pct_salaires', 45.0))
         config.pct_fonctionnement = float(request.form.get('pct_fonctionnement', 25.0))
         config.pct_promoteur = float(request.form.get('pct_promoteur', 15.0))
@@ -238,11 +216,9 @@ def comptabilite():
         flash('Clé de répartition des quotas mise à jour avec succès !', 'success')
         return redirect(url_for('comptabilite'))
 
-    # Calcul du cumul Minerval perçu
     paiements_minerval = Paiement.query.join(RubriqueFrais).filter(RubriqueFrais.est_minerval == True).all()
     total_minerval = sum(p.montant_paye_cdf for p in paiements_minerval)
     
-    # Calculs ventilés
     part_salaires = total_minerval * (config.pct_salaires / 100)
     part_fonctionnement = total_minerval * (config.pct_fonctionnement / 100)
     part_promoteur = total_minerval * (config.pct_promoteur / 100)
@@ -268,11 +244,9 @@ def seed():
     db.drop_all()
     db.create_all()
     
-    # Configuration Quotas par défaut
     config = ConfigurationQuota()
     db.session.add(config)
     
-    # Création des rubriques de base en CDF
     r1 = RubriqueFrais(nom="Frais d'Inscription", montant_cdf=75000.0, description="Inscription obligatoire nouvel élève", est_inscription=True)
     r2 = RubriqueFrais(nom="Minerval - 1er Trimestre", montant_cdf=375000.0, description="Frais d'études T1", est_minerval=True)
     r3 = RubriqueFrais(nom="Minerval - 2ème Trimestre", montant_cdf=375000.0, description="Frais d'études T2", est_minerval=True)
@@ -281,7 +255,7 @@ def seed():
     db.session.add_all([r1, r2, r3, r4])
     db.session.commit()
     
-    return "Base de données réinitialisée avec succès avec la monnaie CDF et les quotas par défaut !"
+    return "Base de données réinitialisée avec succès !"
 
 if __name__ == '__main__':
     with app.app_context():
