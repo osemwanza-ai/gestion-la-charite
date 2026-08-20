@@ -10,7 +10,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# ==================== MODÈLES ====================
+# ==================== MODÈLES DE BASE DE DONNÉES ====================
 
 class ConfigurationQuota(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -24,7 +24,7 @@ class RubriqueFrais(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nom = db.Column(db.String(100), nullable=False)
     montant_cdf = db.Column(db.Float, nullable=False, default=0.0)
-    montant = db.Column(db.Float, nullable=True, default=0.0) # Sécurité retro-compatibilité
+    montant = db.Column(db.Float, nullable=True, default=0.0)
     description = db.Column(db.String(255))
     est_minerval = db.Column(db.Boolean, default=False)
     est_inscription = db.Column(db.Boolean, default=False)
@@ -65,7 +65,7 @@ class Paiement(db.Model):
     date_paiement = db.Column(db.DateTime, default=datetime.utcnow)
     rubrique = db.relationship('RubriqueFrais')
 
-# ==================== ROUTES ====================
+# ==================== ROUTES PRINCIPALES ====================
 
 @app.route('/')
 def index():
@@ -81,6 +81,7 @@ def index():
                            derniers_eleves=derniers_eleves)
 
 @app.route('/admin_frais', methods=['GET', 'POST'])
+@app.route('/admin', methods=['GET', 'POST'])
 def admin_frais():
     if request.method == 'POST':
         nom = request.form.get('nom')
@@ -105,7 +106,12 @@ def admin_frais():
     rubriques = RubriqueFrais.query.all()
     return render_template('admin.html', rubriques=rubriques, frais=rubriques)
 
+# Alias de sécurité si Jinja appelle url_for('admin')
+def admin():
+    return admin_frais()
+
 @app.route('/inscriptions', methods=['GET', 'POST'])
+@app.route('/inscription', methods=['GET', 'POST'])
 def inscriptions():
     rubrique_inscr = RubriqueFrais.query.filter_by(est_inscription=True).first()
     
@@ -157,6 +163,10 @@ def inscriptions():
     eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
     return render_template('inscription.html', eleves=eleves, rubrique_inscr=rubrique_inscr, rubrique=rubrique_inscr)
 
+# Alias de sécurité si Jinja appelle url_for('inscription')
+def inscription():
+    return inscriptions()
+
 @app.route('/paiements', methods=['GET', 'POST'])
 def paiements():
     if request.method == 'POST':
@@ -199,6 +209,7 @@ def comptabilite():
         config.pct_materiel = float(request.form.get('pct_materiel', 10.0))
         config.pct_reserve = float(request.form.get('pct_reserve', 5.0))
         db.session.commit()
+        flash('Quotas mis à jour !', 'success')
         return redirect(url_for('comptabilite'))
 
     paiements_minerval = Paiement.query.join(RubriqueFrais).filter(RubriqueFrais.est_minerval == True).all()
@@ -232,7 +243,7 @@ def seed():
     
     db.session.add_all([r1, r2, r3, r4])
     db.session.commit()
-    return "Base de données réinitialisée !"
+    return "Base de données réinitialisée avec succès !"
 
 if __name__ == '__main__':
     with app.app_context():
