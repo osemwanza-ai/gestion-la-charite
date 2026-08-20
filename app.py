@@ -1,86 +1,126 @@
 import os
-import json
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'la_charite_secret_key_2026'
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///ecole.db')
+app.config['SECRET_KEY'] = 'charite_secret_key_2026'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///charite.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# ==========================================
-# MODÈLES DE BASE DE DONNÉES
-# ==========================================
+# ==================== MODÈLES DE BASE DE DONNÉES ====================
 
-class Eleve(db.Model):
+class ConfigurationQuota(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    matricule = db.Column(db.String(30), unique=True, nullable=False)
-    nom_complet = db.Column(db.String(100), nullable=False)
-    sexe = db.Column(db.String(10), nullable=False)
-    date_naissance = db.Column(db.String(20))
-    lieu_naissance = db.Column(db.String(50))
-    nationalite = db.Column(db.String(50), default="Congolaise")
-    adresse = db.Column(db.Text)
-    groupe_sanguin = db.Column(db.String(10))
-    allergies_sante = db.Column(db.Text)
-    ecole_provenance = db.Column(db.String(100))
-    pourcentage_obtenu = db.Column(db.String(10))
-    nom_pere = db.Column(db.String(100))
-    prof_pere = db.Column(db.String(100))
-    tel_pere = db.Column(db.String(30))
-    nom_mere = db.Column(db.String(100))
-    prof_mere = db.Column(db.String(100))
-    tel_mere = db.Column(db.String(30))
-    section = db.Column(db.String(50), nullable=False)
-    classe = db.Column(db.String(50), nullable=False)
-    option = db.Column(db.String(50), default="N/A")
-    date_inscription = db.Column(db.DateTime, default=datetime.now)
-
-    paiements = db.relationship('Paiement', backref='eleve', lazy=True, cascade="all, delete-orphan")
+    pct_salaires = db.Column(db.Float, default=45.0)
+    pct_fonctionnement = db.Column(db.Float, default=25.0)
+    pct_promoteur = db.Column(db.Float, default=15.0)
+    pct_materiel = db.Column(db.Float, default=10.0)
+    pct_reserve = db.Column(db.Float, default=5.0)
 
 class RubriqueFrais(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nom = db.Column(db.String(100), nullable=False)
-    montant = db.Column(db.Float, nullable=False)
-    description = db.Column(db.Text)
+    montant_cdf = db.Column(db.Float, nullable=False)
+    description = db.Column(db.String(255))
+    est_minerval = db.Column(db.Boolean, default=False)
+    est_inscription = db.Column(db.Boolean, default=False)
 
-    paiements = db.relationship('Paiement', backref='rubrique', lazy=True)
+class Eleve(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    matricule = db.Column(db.String(50), unique=True, nullable=False)
+    nom_complet = db.Column(db.String(150), nullable=False)
+    sexe = db.Column(db.String(10), nullable=False)
+    date_naissance = db.Column(db.String(20))
+    lieu_naissance = db.Column(db.String(100))
+    nationalite = db.Column(db.String(50), default='Congolaise')
+    adresse = db.Column(db.String(200))
+    
+    # Santé & Provenance
+    groupe_sanguin = db.Column(db.String(10))
+    allergies_sante = db.Column(db.String(255))
+    ecole_provenance = db.Column(db.String(150))
+    pourcentage_obtenu = db.Column(db.String(10))
+    
+    # Parents
+    nom_pere = db.Column(db.String(100))
+    prof_pere = db.Column(db.String(100))
+    tel_pere = db.Column(db.String(20))
+    nom_mere = db.Column(db.String(100))
+    prof_mere = db.Column(db.String(100))
+    tel_mere = db.Column(db.String(20))
+    
+    # Affectation
+    section = db.Column(db.String(50), nullable=False)
+    classe = db.Column(db.String(50), nullable=False)
+    option = db.Column(db.String(50))
+    
+    date_inscription = db.Column(db.DateTime, default=datetime.utcnow)
+    paiements = db.relationship('Paiement', backref='eleve', lazy=True, cascade="all, delete-orphan")
 
 class Paiement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    numero_recu = db.Column(db.String(30), unique=True)
+    num_recu = db.Column(db.String(50), unique=True, nullable=False)
     eleve_id = db.Column(db.Integer, db.ForeignKey('eleve.id'), nullable=False)
     rubrique_id = db.Column(db.Integer, db.ForeignKey('rubrique_frais.id'), nullable=False)
-    montant = db.Column(db.Float, nullable=False)
-    mode_paiement = db.Column(db.String(50), default="Cash")
-    reference_bordereau = db.Column(db.String(50))
-    date_paiement = db.Column(db.DateTime, default=datetime.now)
+    montant_paye_cdf = db.Column(db.Float, nullable=False)
+    mode_paiement = db.Column(db.String(50), default='Cash')
+    date_paiement = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    rubrique = db.relationship('RubriqueFrais')
 
-with app.app_context():
-    db.create_all()
-
-# ==========================================
-# ROUTES
-# ==========================================
+# ==================== ROUTES PRINCIPALES ====================
 
 @app.route('/')
 def index():
     total_eleves = Eleve.query.count()
-    total_rubriques = RubriqueFrais.query.count()
-    total_paiements = Paiement.query.count()
-    derniers_eleves = Eleve.query.order_by(Eleve.id.desc()).limit(5).all()
+    paiements = Paiement.query.all()
+    total_encaisse = sum(p.montant_paye_cdf for p in paiements)
+    derniers_paiements = Paiement.query.order_by(Paiement.date_paiement.desc()).limit(5).all()
+    derniers_eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).limit(5).all()
+    
     return render_template('index.html', 
                            total_eleves=total_eleves, 
-                           total_rubriques=total_rubriques, 
-                           total_paiements=total_paiements,
+                           total_encaisse=total_encaisse,
+                           derniers_paiements=derniers_paiements,
                            derniers_eleves=derniers_eleves)
+
+@app.route('/admin_frais', methods=['GET', 'POST'])
+def admin_frais():
+    if request.method == 'POST':
+        nom = request.form.get('nom')
+        montant_cdf = float(request.form.get('montant_cdf', 0))
+        description = request.form.get('description')
+        est_minerval = 'est_minerval' in request.form
+        est_inscription = 'est_inscription' in request.form
+        
+        nouvelle_rubrique = RubriqueFrais(
+            nom=nom, 
+            montant_cdf=montant_cdf, 
+            description=description,
+            est_minerval=est_minerval,
+            est_inscription=est_inscription
+        )
+        db.session.add(nouvelle_rubrique)
+        db.session.commit()
+        flash('Rubrique créée avec succès !', 'success')
+        return redirect(url_for('admin_frais'))
+        
+    rubriques = RubriqueFrais.query.all()
+    return render_template('admin_frais.html', rubriques=rubriques)
 
 @app.route('/inscriptions', methods=['GET', 'POST'])
 def inscriptions():
+    # Vérification si la rubrique "Inscription" a été créée
+    rubrique_inscr = RubriqueFrais.query.filter_by(est_inscription=True).first()
+    
     if request.method == 'POST':
+        if not rubrique_inscr:
+            flash('Impossible d’inscrire un élève : la rubrique Frais d’Inscription n’existe pas encore dans l’Administration.', 'danger')
+            return redirect(url_for('inscriptions'))
+
         count = Eleve.query.count() + 1
         matricule = f"2026-CSC-{count:03d}"
         
@@ -104,119 +144,146 @@ def inscriptions():
             tel_mere=request.form.get('tel_mere'),
             section=request.form.get('section'),
             classe=request.form.get('classe'),
-            option=request.form.get('option', 'N/A')
+            option=request.form.get('option')
         )
         db.session.add(nouvel_eleve)
         db.session.commit()
-        flash(f"Élève inscrit avec succès ! Matricule : {matricule}", "success")
-        return redirect(url_for('inscriptions'))
-
-    eleves = Eleve.query.order_by(Eleve.id.desc()).all()
-    return render_template('inscriptions.html', eleves=eleves)
-
-@app.route('/eleve/<int:id>')
-def fiche_eleve(id):
-    eleve = Eleve.query.get_or_404(id)
-    return render_template('fiche_eleve.html', eleve=eleve)
-
-@app.route('/admin_frais', methods=['GET', 'POST'])
-def admin_frais():
-    if request.method == 'POST':
-        nom = request.form.get('nom')
-        montant = float(request.form.get('montant', 0))
-        description = request.form.get('description')
         
-        nouvelle_rubrique = RubriqueFrais(nom=nom, montant=montant, description=description)
-        db.session.add(nouvelle_rubrique)
+        # Enregistrement automatique du paiement d'inscription
+        num_recu = f"REC-INS-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        p_inscr = Paiement(
+            num_recu=num_recu,
+            eleve_id=nouvel_eleve.id,
+            rubrique_id=rubrique_inscr.id,
+            montant_paye_cdf=rubrique_inscr.montant_cdf,
+            mode_paiement='Cash'
+        )
+        db.session.add(p_inscr)
         db.session.commit()
-        flash("Nouvelle rubrique de frais ajoutée avec succès !", "success")
-        return redirect(url_for('admin_frais'))
 
-    rubriques = RubriqueFrais.query.all()
-    return render_template('admin_frais.html', rubriques=rubriques)
+        flash(f'Élève {nouvel_eleve.nom_complet} inscrit avec succès avec le matricule {matricule} !', 'success')
+        return redirect(url_for('inscriptions'))
+        
+    eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
+    return render_template('inscriptions.html', eleves=eleves, rubrique_inscr=rubrique_inscr)
 
 @app.route('/paiements', methods=['GET', 'POST'])
 def paiements():
     if request.method == 'POST':
-        eleve_id = request.form.get('eleve_id')
-        rubrique_id = request.form.get('rubrique_id')
-        montant = float(request.form.get('montant', 0))
-        mode = request.form.get('mode_paiement', 'Cash')
-        ref = request.form.get('reference_bordereau', '')
-
-        count = Paiement.query.count() + 1
-        num_recu = f"REC-2026-{count:04d}"
-
-        nouveau_paiement = Paiement(
-            numero_recu=num_recu,
+        eleve_id = int(request.form.get('eleve_id'))
+        rubrique_id = int(request.form.get('rubrique_id'))
+        montant_paye_cdf = float(request.form.get('montant_paye_cdf'))
+        mode_paiement = request.form.get('mode_paiement', 'Cash')
+        
+        num_recu = f"REC-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        
+        nouveau_p = Paiement(
+            num_recu=num_recu,
             eleve_id=eleve_id,
             rubrique_id=rubrique_id,
-            montant=montant,
-            mode_paiement=mode,
-            reference_bordereau=ref
+            montant_paye_cdf=montant_paye_cdf,
+            mode_paiement=mode_paiement
         )
-        db.session.add(nouveau_paiement)
+        db.session.add(nouveau_p)
         db.session.commit()
-        flash(f"Paiement enregistré ! Reçu N° {num_recu}", "success")
-        return redirect(url_for('paiements'))
+        
+        flash('Versement enregistré avec succès !', 'success')
+        return redirect(url_for('ticket_pos', paiement_id=nouveau_p.id))
+        
+    eleves = Eleve.query.all()
+    rubriques = RubriqueFrais.query.all()
+    historique_paiements = Paiement.query.order_by(Paiement.date_paiement.desc()).all()
+    
+    return render_template('paiements.html', eleves=eleves, rubriques=rubriques, paiements=historique_paiements)
 
-    rubriques_admin = RubriqueFrais.query.filter(RubriqueFrais.nom.notilike("%inscription%")).all()
-    eleves = Eleve.query.order_by(Eleve.nom_complet).all()
-    historique_paiements = Paiement.query.order_by(Paiement.id.desc()).all()
+@app.route('/eleve/<int:id>', methods=['GET', 'POST'])
+def eleve_detail(id):
+    eleve = Eleve.query.get_or_404(id)
+    if request.method == 'POST':
+        # Modification des données de l'élève par l'Admin
+        eleve.nom_complet = request.form.get('nom_complet')
+        eleve.sexe = request.form.get('sexe')
+        eleve.section = request.form.get('section')
+        eleve.classe = request.form.get('classe')
+        eleve.option = request.form.get('option')
+        eleve.tel_pere = request.form.get('tel_pere')
+        eleve.tel_mere = request.form.get('tel_mere')
+        eleve.adresse = request.form.get('adresse')
+        db.session.commit()
+        flash('Fiche élève mise à jour avec succès.', 'success')
+        return redirect(url_for('eleve_detail', id=eleve.id))
+        
+    paiements = Paiement.query.filter_by(eleve_id=eleve.id).all()
+    total_paye = sum(p.montant_paye_cdf for p in paiements)
+    
+    return render_template('eleve_detail.html', eleve=eleve, paiements=paiements, total_paye=total_paye)
 
-    soldes = {}
-    for el in eleves:
-        soldes[str(el.id)] = {}
-        for rub in rubriques_admin:
-            total_paye = db.session.query(db.func.sum(Paiement.montant)).filter(
-                Paiement.eleve_id == el.id, 
-                Paiement.rubrique_id == rub.id
-            ).scalar() or 0.0
-            soldes[str(el.id)][str(rub.id)] = {
-                'paye': float(total_paye),
-                'reste': float(max(0.0, rub.montant - total_paye))
-            }
+@app.route('/comptabilite', methods=['GET', 'POST'])
+def comptabilite():
+    config = ConfigurationQuota.query.first()
+    if not config:
+        config = ConfigurationQuota()
+        db.session.add(config)
+        db.session.commit()
+        
+    if request.method == 'POST':
+        # Modification des quotas par l'Admin
+        config.pct_salaires = float(request.form.get('pct_salaires', 45.0))
+        config.pct_fonctionnement = float(request.form.get('pct_fonctionnement', 25.0))
+        config.pct_promoteur = float(request.form.get('pct_promoteur', 15.0))
+        config.pct_materiel = float(request.form.get('pct_materiel', 10.0))
+        config.pct_reserve = float(request.form.get('pct_reserve', 5.0))
+        
+        db.session.commit()
+        flash('Clé de répartition des quotas mise à jour avec succès !', 'success')
+        return redirect(url_for('comptabilite'))
 
-    return render_template('paiements.html', 
-                           eleves=eleves, 
-                           rubriques=rubriques_admin, 
-                           paiements=historique_paiements,
-                           soldes=json.dumps(soldes))
+    # Calcul du cumul Minerval perçu
+    paiements_minerval = Paiement.query.join(RubriqueFrais).filter(RubriqueFrais.est_minerval == True).all()
+    total_minerval = sum(p.montant_paye_cdf for p in paiements_minerval)
+    
+    # Calculs ventilés
+    part_salaires = total_minerval * (config.pct_salaires / 100)
+    part_fonctionnement = total_minerval * (config.pct_fonctionnement / 100)
+    part_promoteur = total_minerval * (config.pct_promoteur / 100)
+    part_materiel = total_minerval * (config.pct_materiel / 100)
+    part_reserve = total_minerval * (config.pct_reserve / 100)
+    
+    return render_template('comptabilite.html', 
+                           config=config, 
+                           total_minerval=total_minerval,
+                           part_salaires=part_salaires,
+                           part_fonctionnement=part_fonctionnement,
+                           part_promoteur=part_promoteur,
+                           part_materiel=part_materiel,
+                           part_reserve=part_reserve)
+
+@app.route('/ticket_pos/<int:paiement_id>')
+def ticket_pos(paiement_id):
+    paiement = Paiement.query.get_or_404(paiement_id)
+    return render_template('ticket_pos.html', p=paiement)
 
 @app.route('/seed')
-def seed_data():
-    try:
-        db.drop_all()
-        db.create_all()
-
-        r_inscr = RubriqueFrais(nom="Frais d'inscription", montant=50.0, description="Admission obligatoire")
-        r_t1 = RubriqueFrais(nom="Minerval - 1er Trimestre", montant=150.0, description="Scolarité T1")
-        r_t2 = RubriqueFrais(nom="Minerval - 2ème Trimestre", montant=150.0, description="Scolarité T2")
-        r_tech = RubriqueFrais(nom="Frais Techniques & Labo", montant=30.0, description="Matériel informatique")
-        r_bulletin = RubriqueFrais(nom="Frais de Bulletin", montant=10.0, description="Édition bulletins")
-
-        db.session.add_all([r_inscr, r_t1, r_t2, r_tech, r_bulletin])
-        db.session.commit()
-
-        e1 = Eleve(matricule="2026-CSC-001", nom_complet="KABANGA MPOYI Christian", sexe="M", date_naissance="2019-04-12", lieu_naissance="Kinshasa", adresse="Av. Lukusa N° 45, Gombe", nom_pere="KABANGA Joseph", tel_pere="+243810000001", section="Maternelle", classe="3ème Maternelle")
-        e2 = Eleve(matricule="2026-CSC-002", nom_complet="NDAYA KASONGO Grace", sexe="F", date_naissance="2016-08-20", lieu_naissance="Lubumbashi", adresse="Av. Kasa-Vubu N° 102, Ngiri-Ngiri", nom_pere="KASONGO Alain", tel_pere="+243810000002", section="Primaire", classe="4ème Primaire")
-        e3 = Eleve(matricule="2026-CSC-003", nom_complet="MUKENDI MUTOMBO Daniel", sexe="M", date_naissance="2012-01-15", lieu_naissance="Kinshasa", adresse="Av. Université N° 88, Makala", nom_pere="MUTOMBO Pierre", tel_pere="+243810000003", section="EB", classe="8ème EB")
-        e4 = Eleve(matricule="2026-CSC-004", nom_complet="TSHIBOLA LUKUSA Esther", sexe="F", date_naissance="2009-11-05", lieu_naissance="Mbuji-Mayi", adresse="Av. Huileries N° 14, Lingwala", nom_pere="LUKUSA François", tel_pere="+243810000004", section="Humanités", classe="3ème Humanités", option="Commerciale & Gestion")
-
-        db.session.add_all([e1, e2, e3, e4])
-        db.session.commit()
-
-        p1 = Paiement(numero_recu="REC-2026-0001", eleve_id=e1.id, rubrique_id=r_t1.id, montant=150.0, mode_paiement="Cash")
-        p2 = Paiement(numero_recu="REC-2026-0002", eleve_id=e2.id, rubrique_id=r_t1.id, montant=100.0, mode_paiement="Cash")
-        p3 = Paiement(numero_recu="REC-2026-0003", eleve_id=e4.id, rubrique_id=r_tech.id, montant=30.0, mode_paiement="Mobile Money")
-
-        db.session.add_all([p1, p2, p3])
-        db.session.commit()
-
-        flash("Base de données réinitialisée avec succès !", "success")
-        return redirect(url_for('index'))
-    except Exception as e:
-        return f"Erreur lors de la réinitialisation : {str(e)}", 500
+def seed():
+    db.drop_all()
+    db.create_all()
+    
+    # Configuration Quotas par défaut
+    config = ConfigurationQuota()
+    db.session.add(config)
+    
+    # Création des rubriques de base en CDF
+    r1 = RubriqueFrais(nom="Frais d'Inscription", montant_cdf=75000.0, description="Inscription obligatoire nouvel élève", est_inscription=True)
+    r2 = RubriqueFrais(nom="Minerval - 1er Trimestre", montant_cdf=375000.0, description="Frais d'études T1", est_minerval=True)
+    r3 = RubriqueFrais(nom="Minerval - 2ème Trimestre", montant_cdf=375000.0, description="Frais d'études T2", est_minerval=True)
+    r4 = RubriqueFrais(nom="Minerval - 3ème Trimestre", montant_cdf=375000.0, description="Frais d'études T3", est_minerval=True)
+    
+    db.session.add_all([r1, r2, r3, r4])
+    db.session.commit()
+    
+    return "Base de données réinitialisée avec succès avec la monnaie CDF et les quotas par défaut !"
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
