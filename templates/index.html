@@ -1,116 +1,84 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tableau de bord - CS La Charité</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background-color: #f4f6f9; font-family: system-ui, -apple-system, sans-serif; }
-        .card-custom { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .stat-card { border-radius: 12px; padding: 20px; color: white; }
-    </style>
-</head>
-<body>
+{% extends 'base.html' %}
 
-<div class="container py-4">
-    <div class="row align-items-center mb-4">
-        <div class="col-md-7">
-            <h2 class="fw-bold text-primary m-0">Complexe Scolaire La Charité</h2>
-            <p class="text-muted small m-0">Système de Gestion Scolaire & Financière</p>
-        </div>
-        <div class="col-md-5 text-md-end mt-3 mt-md-0">
-            <a href="{{ url_for('inscription') }}" class="btn btn-success fw-bold me-2">
-                <i class="fa-solid fa-user-plus me-1"></i> Nouvel Élève
-            </a>
-            <a href="{{ url_for('paiement') }}" class="btn btn-primary fw-bold">
-                <i class="fa-solid fa-cash-register me-1"></i> Nouveau Paiement
-            </a>
-        </div>
-    </div>
-
-    <!-- Statistiques -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-6">
-            <div class="stat-card bg-primary">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <small class="text-white-50 text-uppercase fw-bold">Total Élèves Inscrits</small>
-                        <h2 class="fw-bold m-0 mt-1">{{ total_eleves }}</h2>
-                    </div>
-                    <i class="fa-solid fa-users fa-3x opacity-50"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="stat-card bg-success">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <small class="text-white-50 text-uppercase fw-bold">Total Recouvré</small>
-                        <h2 class="fw-bold m-0 mt-1">{{ "{:,.0f}".format(total_recouvre) }} FC</h2>
-                    </div>
-                    <i class="fa-solid fa-wallet fa-3x opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Menu & Activités -->
-    <div class="row g-4">
-        <div class="col-md-4">
-            <div class="card card-custom bg-white p-3">
-                <h5 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-bars me-2"></i>Menu principal</h5>
-                <div class="list-group list-group-flush">
-                    <a href="{{ url_for('liste_eleves') }}" class="list-group-item list-group-item-action py-3 fw-bold text-primary">
-                        <i class="fa-solid fa-address-book me-2"></i> Répertoire des élèves
-                    </a>
-                    <a href="{{ url_for('inscription') }}" class="list-group-item list-group-item-action py-3 fw-bold text-success">
-                        <i class="fa-solid fa-user-plus me-2"></i> Formulaire d'inscription
-                    </a>
-                    <a href="{{ url_for('paiement') }}" class="list-group-item list-group-item-action py-3 fw-bold text-dark">
-                        <i class="fa-solid fa-file-invoice-dollar me-2"></i> Guichet de paiement
-                    </a>
-                    <a href="{{ url_for('admin') }}" class="list-group-item list-group-item-action py-3 fw-bold text-danger border-top">
-                        <i class="fa-solid fa-sliders me-2"></i> Administration & Frais
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-8">
-            <div class="card card-custom bg-white p-4">
-                <h5 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-clock-rotate-left me-2"></i>Derniers paiements enregistrés</h5>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Élève</th>
-                                <th>Montant</th>
-                                <th>Trimestre</th>
-                                <th>Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for p in derniers_paiements %}
-                            <tr>
-                                <td class="fw-bold">{{ p.eleve.nom_complet }}</td>
-                                <td class="text-success fw-bold">{{ "{:,.0f}".format(p.montant) }} FC</td>
-                                <td>{{ p.trimestre or '-' }}</td>
-                                <td class="small text-muted">{{ p.date_paiement.strftime('%d/%m/%Y %H:%M') }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="4" class="text-center text-muted py-4">Aucun paiement récent.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card card-custom p-4 bg-white">
+            <h2 class="fw-bold text-primary"><i class="fa-solid fa-gauge me-2"></i>Tableau de Bord - C.S. La Charité</h2>
+            <p class="text-muted mb-0">Vue d'ensemble des effectifs scolaires et activités récentes.</p>
         </div>
     </div>
 </div>
 
-</body>
-</html>
+<!-- Cartes d'Effectifs -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card card-custom p-3 border-start border-primary border-4">
+            <div class="text-muted small">Total Élèves Inscris</div>
+            <div class="fs-2 fw-bold text-primary">{{ total_eleves }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-custom p-3 border-start border-success border-4">
+            <div class="text-muted small">Section Maternelle</div>
+            <div class="fs-2 fw-bold text-success">{{ total_maternelle }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-custom p-3 border-start border-warning border-4">
+            <div class="text-muted small">Section Primaire</div>
+            <div class="fs-2 fw-bold text-warning">{{ total_primaire }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-custom p-3 border-start border-info border-4">
+            <div class="text-muted small">Secondaire & Humanités</div>
+            <div class="fs-2 fw-bold text-info">{{ total_secondaire + total_humanités }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Raccourcis & Dernières Inscriptions -->
+<div class="row g-4">
+    <div class="col-md-8">
+        <div class="card card-custom p-3">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-clock-rotate-left me-2"></i>Dernières Inscriptions</h5>
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Matricule</th>
+                        <th>Nom Complet</th>
+                        <th>Classe</th>
+                        <th>Section</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for eleve in derniers_inscrits %}
+                    <tr>
+                        <td><span class="badge bg-secondary">{{ eleve.matricule }}</span></td>
+                        <td class="fw-bold">{{ eleve.nom_complet }}</td>
+                        <td>{{ eleve.classe }}</td>
+                        <td>{{ eleve.section }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-3">Aucune inscription récente.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card card-custom p-3">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-bolt me-2"></i>Actions Rapides</h5>
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('inscription') }}" class="btn btn-primary py-2"><i class="fa-solid fa-user-plus me-2"></i>Inscrire un Élève</a>
+                <a href="{{ url_for('liste_eleves') }}" class="btn btn-outline-secondary py-2"><i class="fa-solid fa-list me-2"></i>Consulter le Répertoire</a>
+                <a href="{{ url_for('gestion_frais') }}" class="btn btn-outline-info py-2"><i class="fa-solid fa-coins me-2"></i>Configurer les Tarifs</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
