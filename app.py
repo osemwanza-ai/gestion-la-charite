@@ -4,8 +4,11 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'la_charite_secret_key_2026'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ecole.db'
+app.config['SECRET_KEY'] = 'charite_secret_key_2026'
+
+# Configuration de la base de données (SQLite en local ou PostgreSQL)
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'charite.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -16,148 +19,131 @@ db = SQLAlchemy(app)
 
 class Eleve(db.Model):
     __tablename__ = 'eleves'
+
     id = db.Column(db.Integer, primary_key=True)
-    matricule = db.Column(db.String(20), unique=True, nullable=False)
+    matricule = db.Column(db.String(30), unique=True, nullable=False)
     nom_complet = db.Column(db.String(100), nullable=False)
     sexe = db.Column(db.String(10), nullable=False)
-    date_naissance = db.Column(db.String(20))
-    lieu_naissance = db.Column(db.String(100))
-    adresse = db.Column(db.String(200))
-    section = db.Column(db.String(50), nullable=False)
-    classe = db.Column(db.String(50), nullable=False)
-    option = db.Column(db.String(50))
-    nom_responsables = db.Column(db.String(100), nullable=False)
-    lien_parente = db.Column(db.String(50))
-    telephone_principal = db.Column(db.String(20), nullable=False)
-    telephone_secondaire = db.Column(db.String(20))
-    date_inscription = db.Column(db.DateTime, default=datetime.utcnow)
+    date_naissance = db.Column(db.String(20), nullable=False)
+    lieu_naissance = db.Column(db.String(100), nullable=False)
+    nationalite = db.Column(db.String(50), default="Congolaise")
+    adresse = db.Column(db.String(200), nullable=False)
     
+    # Santé & Parcours
+    groupe_sanguin = db.Column(db.String(10))
+    allergies_sante = db.Column(db.Text)
+    ecole_provenance = db.Column(db.String(150))
+    pourcentage_obtenu = db.Column(db.String(10))
+
+    # Parents & Tuteur
+    nom_pere = db.Column(db.String(100))
+    prof_pere = db.Column(db.String(100))
+    tel_pere = db.Column(db.String(30))
+    nom_mere = db.Column(db.String(100))
+    prof_mere = db.Column(db.String(100))
+    tel_mere = db.Column(db.String(30))
+    nom_tuteur = db.Column(db.String(100))
+    tel_tuteur = db.Column(db.String(30))
+    email_responsable = db.Column(db.String(100))
+
+    # Affectation Scolaire
+    section = db.Column(db.String(30), nullable=False)
+    classe = db.Column(db.String(30), nullable=False)
+    option = db.Column(db.String(50))
+    date_inscription = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relations
     paiements = db.relationship('Paiement', backref='eleve', lazy=True, cascade="all, delete-orphan")
+
 
 class RubriqueFrais(db.Model):
     __tablename__ = 'rubriques_frais'
+
     id = db.Column(db.Integer, primary_key=True)
     nom = db.Column(db.String(100), nullable=False)
     montant = db.Column(db.Float, nullable=False)
-    section = db.Column(db.String(50))
+    description = db.Column(db.String(200))
+    
+    paiements = db.relationship('Paiement', backref='rubrique', lazy=True)
+
 
 class Paiement(db.Model):
     __tablename__ = 'paiements'
+
     id = db.Column(db.Integer, primary_key=True)
     eleve_id = db.Column(db.Integer, db.ForeignKey('eleves.id'), nullable=False)
-    rubrique_id = db.Column(db.Integer, db.ForeignKey('rubriques_frais.id'), nullable=True)
+    rubrique_id = db.Column(db.Integer, db.ForeignKey('rubriques_frais.id'), nullable=False)
     montant = db.Column(db.Float, nullable=False)
-    trimestre = db.Column(db.String(20))
-    mode_paiement = db.Column(db.String(50), default='Espèces')
     date_paiement = db.Column(db.DateTime, default=datetime.utcnow)
 
-    rubrique = db.relationship('RubriqueFrais', backref='paiements')
 
-
-# ==========================================
-# INITIALISATION
-# ==========================================
+# Création initiale des tables dans le contexte de l'application
 with app.app_context():
     db.create_all()
 
 
-# Fonction utilitaire pour trouver le frais d'inscription
-def obtenir_frais_inscription():
-    rubriques = RubriqueFrais.query.all()
-    for r in rubriques:
-        nom_clean = r.nom.lower().replace("'", "").replace("’", "").replace(" ", "")
-        if 'inscription' in nom_clean:
-            return r
-    return None
-
-
 # ==========================================
-# ROUTES
+# ROUTES & LOGIQUE DE L'APPLICATION
 # ==========================================
 
 @app.route('/')
 def index():
-    total_eleves = Eleve.query.count()
-    total_recouvre = db.session.query(db.func.sum(Paiement.montant)).scalar() or 0.0
-    derniers_paiements = Paiement.query.order_by(Paiement.date_paiement.desc()).limit(5).all()
-    return render_template('index.html', total_eleves=total_eleves, total_recouvre=total_recouvre, derniers_paiements=derniers_paiements)
-
-
-@app.route('/admin', methods=['GET', 'POST'])
-def admin():
-    if request.method == 'POST':
-        action = request.form.get('action')
-        
-        if action == 'ajouter_rubrique':
-            nom = request.form.get('nom', '').strip()
-            montant = float(request.form.get('montant', 0))
-            section = request.form.get('section')
-            
-            nouvelle_rubrique = RubriqueFrais(nom=nom, montant=montant, section=section)
-            db.session.add(nouvelle_rubrique)
-            db.session.commit()
-            flash('Frais enregistré avec succès !', 'success')
-            
-        elif action == 'supprimer_rubrique':
-            rubrique_id = request.form.get('rubrique_id')
-            rubrique = RubriqueFrais.query.get(rubrique_id)
-            if rubrique:
-                db.session.delete(rubrique)
-                db.session.commit()
-                flash('Rubrique supprimée !', 'danger')
-
-        return redirect(url_for('admin'))
-
-    rubriques = RubriqueFrais.query.all()
-    return render_template('admin.html', rubriques=rubriques)
+    return redirect(url_for('liste_eleves'))
 
 
 @app.route('/inscription', methods=['GET', 'POST'])
 def inscription():
-    # Détection automatique du frais d'inscription défini dans l'admin
-    frais_inscription = obtenir_frais_inscription()
+    frais_inscription = RubriqueFrais.query.filter(RubriqueFrais.nom.ilike("%inscription%")).first()
 
     if request.method == 'POST':
-        # Bloquer si le frais n'existe toujours pas dans la base
         if not frais_inscription:
-            flash("Blocage : Veuillez d'abord définir le frais d'inscription dans l'Espace Administrateur.", "danger")
+            flash("Erreur : La rubrique 'Frais d'inscription' n'est pas encore créée dans les paramètres de gestion.", "danger")
             return redirect(url_for('inscription'))
 
-        dernier_eleve = Eleve.query.order_by(Eleve.id.desc()).first()
-        next_id = (dernier_eleve.id + 1) if dernier_eleve else 1
-        matricule = f"CSC-{datetime.now().year}-{next_id:04d}"
+        annee = datetime.now().year
+        count = Eleve.query.count() + 1
+        matricule = f"{annee}-CSC-{count:03d}"
 
-        # 1. Enregistrement de l'élève
         nouvel_eleve = Eleve(
             matricule=matricule,
             nom_complet=request.form.get('nom_complet'),
             sexe=request.form.get('sexe'),
             date_naissance=request.form.get('date_naissance'),
             lieu_naissance=request.form.get('lieu_naissance'),
+            nationalite=request.form.get('nationalite', 'Congolaise'),
             adresse=request.form.get('adresse'),
+            groupe_sanguin=request.form.get('groupe_sanguin'),
+            allergies_sante=request.form.get('allergies_sante'),
+            ecole_provenance=request.form.get('ecole_provenance'),
+            pourcentage_obtenu=request.form.get('pourcentage_obtenu'),
+            nom_pere=request.form.get('nom_pere'),
+            prof_pere=request.form.get('prof_pere'),
+            tel_pere=request.form.get('tel_pere'),
+            nom_mere=request.form.get('nom_mere'),
+            prof_mere=request.form.get('prof_mere'),
+            tel_mere=request.form.get('tel_mere'),
+            nom_tuteur=request.form.get('nom_tuteur'),
+            tel_tuteur=request.form.get('tel_tuteur'),
+            email_responsable=request.form.get('email_responsable'),
             section=request.form.get('section'),
             classe=request.form.get('classe'),
-            option=request.form.get('option'),
-            nom_responsables=request.form.get('nom_responsables'),
-            lien_parente=request.form.get('lien_parente'),
-            telephone_principal=request.form.get('telephone_principal'),
-            telephone_secondaire=request.form.get('telephone_secondaire')
+            option=request.form.get('option') if request.form.get('section') == 'Humanités' else None
         )
-        db.session.add(nouvel_eleve)
-        db.session.flush() # Récupère l'ID généré pour l'élève
 
-        # 2. Comptabilisation automatique du paiement du frais d'inscription
-        paiement_inscription = Paiement(
+        db.session.add(nouvel_eleve)
+        db.session.commit()
+
+        # Enregistrement automatique du paiement de l'inscription
+        p_inscr = Paiement(
             eleve_id=nouvel_eleve.id,
             rubrique_id=frais_inscription.id,
             montant=frais_inscription.montant,
-            trimestre="Inscription",
-            mode_paiement="Espèces"
+            date_paiement=datetime.now()
         )
-        db.session.add(paiement_inscription)
-        
+        db.session.add(p_inscr)
         db.session.commit()
-        flash(f"Élève inscrit avec succès ! Le frais d'inscription de {frais_inscription.montant:,.0f} FC a été comptabilisé.", 'success')
+
+        flash(f"L'élève {nouvel_eleve.nom_complet} a été inscrit avec succès. Matricule attribué : {matricule}", "success")
         return redirect(url_for('liste_eleves'))
 
     return render_template('inscription.html', frais_inscription=frais_inscription)
@@ -179,61 +165,42 @@ def liste_eleves():
         query = query.filter(Eleve.classe.ilike(f"%{classe_filter}%"))
 
     eleves_db = query.order_by(Eleve.nom_complet.asc()).all()
+
+    total_eleves = Eleve.query.count()
+    total_garcons = Eleve.query.filter_by(sexe='M').count()
+    total_filles = Eleve.query.filter_by(sexe='F').count()
+
     rubriques = RubriqueFrais.query.all()
-    total_frais_fixe = sum(r.montant for r in rubriques)
+    rubriques_scolaires = [r for r in rubriques if 'inscription' not in r.nom.lower()]
 
     eleves_data = []
     for e in eleves_db:
-        total_paye = sum(p.montant for p in e.paiements)
-        reste_a_payer = max(0.0, total_frais_fixe - total_paye)
+        frais_detail = []
+        for r in rubriques_scolaires:
+            paye = sum(p.montant for p in e.paiements if p.rubrique_id == r.id)
+            solde = max(0.0, r.montant - paye)
+            frais_detail.append({
+                'nom': r.nom,
+                'montant_du': r.montant,
+                'montant_paye': paye,
+                'solde': solde
+            })
 
         eleves_data.append({
             'obj': e,
-            'total_paye': total_paye,
-            'reste_a_payer': reste_a_payer,
-            'total_du': total_frais_fixe
+            'frais_detail': frais_detail
         })
 
-    return render_template('eleves.html', eleves_data=eleves_data, nom_sel=nom_filter, section_sel=section_filter, classe_sel=classe_filter)
-
-
-@app.route('/paiement', methods=['GET', 'POST'])
-def paiement():
-    eleve_id = request.args.get('eleve_id')
-    eleve_selectionne = Eleve.query.get(eleve_id) if eleve_id else None
-
-    if request.method == 'POST':
-        e_id = request.form.get('eleve_id')
-        rubrique_id = request.form.get('rubrique_id')
-        montant = float(request.form.get('montant', 0))
-        trimestre = request.form.get('trimestre')
-        mode = request.form.get('mode_paiement', 'Espèces')
-
-        nouveau_p = Paiement(
-            eleve_id=e_id,
-            rubrique_id=rubrique_id if rubrique_id else None,
-            montant=montant,
-            trimestre=trimestre,
-            mode_paiement=mode
-        )
-        db.session.add(nouveau_p)
-        db.session.commit()
-        flash('Paiement enregistré avec succès !', 'success')
-        return redirect(url_for('imprimer_recu', type_recu='paiement', id_recu=nouveau_p.id))
-
-    eleves = Eleve.query.order_by(Eleve.nom_complet.asc()).all()
-    rubriques = RubriqueFrais.query.all()
-    return render_template('paiement.html', eleves=eleves, rubriques=rubriques, eleve_selectionne=eleve_selectionne)
-
-
-@app.route('/imprimer_recu/<type_recu>/<int:id_recu>')
-def imprimer_recu(type_recu, id_recu):
-    if type_recu == 'paiement':
-        p = Paiement.query.get_or_404(id_recu)
-        return render_template('recu_print.html', type='paiement', p=p, e=p.eleve, datetime_now=datetime.now().strftime('%d/%m/%Y %H:%M'))
-    else:
-        e = Eleve.query.get_or_404(id_recu)
-        return render_template('recu_print.html', type='inscription', e=e, datetime_now=datetime.now().strftime('%d/%m/%Y %H:%M'))
+    return render_template(
+        'eleves.html',
+        eleves_data=eleves_data,
+        total_eleves=total_eleves,
+        total_garcons=total_garcons,
+        total_filles=total_filles,
+        nom_sel=nom_filter,
+        section_sel=section_filter,
+        classe_sel=classe_filter
+    )
 
 
 if __name__ == '__main__':
