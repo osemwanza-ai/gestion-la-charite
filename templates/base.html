@@ -3,61 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Complexe Scolaire La Charité</title>
+    <title>Complexe Scolaire La Charité - Gestion Scolaire</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .navbar { background-color: #1a365d; }
-        .card-custom { border-radius: 10px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        .nav-link.active {
+            font-weight: 600;
+            border-bottom: 2px solid #fff;
+        }
+        .footer {
+            margin-top: auto;
+            background-color: #ffffff;
+            border-top: 1px solid #dee2e6;
+        }
     </style>
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+<body class="d-flex flex-column min-vh-100">
+
+    <!-- BARRE DE NAVIGATION PRINCIPALE -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">
-                <i class="fa-solid fa-school me-2"></i>C.S. LA CHARITÉ
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-mortarboard-fill me-2"></i>CS La Charité
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('index') }}"><i class="fa-solid fa-house me-1"></i> Accueil</a>
+                        <a class="nav-link" href="{{ url_for('index') }}">
+                            <i class="bi bi-speedometer2 me-1"></i>Tableau de bord
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('liste_eleves') }}"><i class="fa-solid fa-users me-1"></i> Répertoire Élèves</a>
+                        <a class="nav-link" href="{{ url_for('inscriptions') }}">
+                            <i class="bi bi-person-plus-fill me-1"></i>Inscriptions
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('gestion_frais') }}"><i class="fa-solid fa-coins me-1"></i> Tarification Frais</a>
-                    </li>
-                    <li class="nav-item ms-lg-2">
-                        <a class="btn btn-outline-light text-white px-3" href="{{ url_for('inscription') }}">
-                            <i class="fa-solid fa-user-plus me-1"></i> Inscription
+                        <!-- Aligné avec def paiements() dans app.py -->
+                        <a class="nav-link" href="{{ url_for('paiements') }}">
+                            <i class="bi bi-cash-coin me-1"></i>Paiements
                         </a>
                     </li>
                 </ul>
+                <div class="d-flex">
+                    <a href="{{ url_for('seed_data') }}" class="btn btn-outline-light btn-sm" onclick="return confirm('Attention : Cela va réinitialiser la base de données. Continuer ?');">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Réinitialiser BDD
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container">
+    <!-- MESSAGES FLASH -->
+    <div class="container mt-3">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                        <i class="bi bi-info-circle-fill me-2"></i>{{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
-
-        {% block content %}{% endblock %}
     </div>
 
+    <!-- CONTENU PRINCIPAL DE LA PAGE -->
+    <main class="flex-shrink-0">
+        {% block content %}
+        <!-- Le contenu des autres templates s'insère ici -->
+        {% endblock %}
+    </main>
+
+    <!-- PIED DE PAGE -->
+    <footer class="footer py-3 mt-auto text-center text-muted">
+        <div class="container">
+            <small>&copy; 2026 Complexe Scolaire La Charité — Système d'Administration et Gestion Scolaire</small>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 JS Bundle (avec Popper) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    {% block scripts %}{% endblock %}
 </body>
 </html>
