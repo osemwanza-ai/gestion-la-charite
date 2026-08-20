@@ -9,7 +9,7 @@
 </head>
 <body class="bg-light">
 
-    <!-- Barre de Navigation -->
+    <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
         <div class="container">
             <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">CS LA CHARITÉ</a>
@@ -30,7 +30,7 @@
 
     <div class="container pb-5">
         
-        <!-- Messages de notification Flash -->
+        <!-- Messages flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -44,7 +44,7 @@
 
         <div class="row g-4">
             
-            <!-- Formulaire d'ajout de frais -->
+            <!-- Formulaire de création -->
             <div class="col-lg-5">
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white py-3">
@@ -55,7 +55,7 @@
                             
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Nom de la rubrique</label>
-                                <input type="text" name="nom" class="form-control" placeholder="ex: Minerval 1er Trimestre" required>
+                                <input type="text" name="nom" class="form-control" placeholder="ex: Frais de Bulletin, Uniforme, etc." required>
                             </div>
 
                             <div class="mb-3">
@@ -68,7 +68,7 @@
 
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Description</label>
-                                <textarea name="description" class="form-control" rows="2" placeholder="Précisions éventuelles..."></textarea>
+                                <textarea name="description" class="form-control" rows="2" placeholder="Informations complémentaires..."></textarea>
                             </div>
 
                             <div class="mb-3 bg-light p-3 rounded border">
@@ -83,14 +83,14 @@
                             </div>
 
                             <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
-                                <i class="bi bi-check-lg me-1"></i> Enregistrer la rubrique
+                                <i class="bi bi-check-lg me-1"></i> Ajouter la rubrique
                             </button>
                         </form>
                     </div>
                 </div>
             </div>
 
-            <!-- Liste des rubriques configurées -->
+            <!-- Liste des rubriques existantes -->
             <div class="col-lg-7">
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white py-3">
@@ -104,7 +104,7 @@
                                         <th>Rubrique</th>
                                         <th>Montant</th>
                                         <th>Type</th>
-                                        <th>Description</th>
+                                        <th class="text-end">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -112,12 +112,15 @@
                                     {% if liste_rubriques %}
                                         {% for r in liste_rubriques %}
                                             <tr>
-                                                <td class="fw-bold">{{ r.nom }}</td>
+                                                <td>
+                                                    <div class="fw-bold">{{ r.nom }}</div>
+                                                    <small class="text-muted">{{ r.description or 'Aucune description' }}</small>
+                                                </td>
                                                 <td class="text-nowrap fw-bold text-success">
                                                     {% if r.montant_cdf is defined and r.montant_cdf %}
                                                         {{ "{:,.0f}".format(r.montant_cdf) }} CDF
                                                     {% else %}
-                                                        {{ "{:,.0f}".format(r.montant) }} CDF
+                                                        {{ "{:,.0f}".format(r.montant or 0) }} CDF
                                                     {% endif %}
                                                 </td>
                                                 <td>
@@ -129,8 +132,65 @@
                                                         <span class="badge bg-secondary">Autre</span>
                                                     {% endif %}
                                                 </td>
-                                                <td class="text-muted small">{{ r.description or '-' }}</td>
+                                                <td class="text-end text-nowrap">
+                                                    <!-- Bouton d'édition -->
+                                                    <button type="button" class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#editModal{{ r.id }}">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <!-- Bouton de suppression -->
+                                                    <form action="{{ url_for('supprimer_rubrique', id=r.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Voulez-vous vraiment supprimer cette rubrique ?');">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>
                                             </tr>
+
+                                            <!-- Modale d'Édition pour cette rubrique -->
+                                            <div class="modal fade" id="editModal{{ r.id }}" tabindex="-1">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <form action="{{ url_for('modifier_rubrique', id=r.id) }}" method="POST">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square text-primary me-2"></i>Modifier {{ r.nom }}</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="mb-3">
+                                                                    <label class="form-label fw-semibold">Nom de la rubrique</label>
+                                                                    <input type="text" name="nom" class="form-control" value="{{ r.nom }}" required>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label fw-semibold">Montant (CDF)</label>
+                                                                    <div class="input-group">
+                                                                        <input type="number" step="0.01" name="montant_cdf" class="form-control" value="{{ r.montant_cdf or r.montant }}" required>
+                                                                        <span class="input-group-text">CDF</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label fw-semibold">Description</label>
+                                                                    <textarea name="description" class="form-control" rows="2">{{ r.description or '' }}</textarea>
+                                                                </div>
+                                                                <div class="mb-3 bg-light p-3 rounded border">
+                                                                    <div class="form-check form-switch mb-2">
+                                                                        <input class="form-check-input" type="checkbox" name="est_minerval" id="est_minerval{{ r.id }}" {% if r.est_minerval %}checked{% endif %}>
+                                                                        <label class="form-check-label fw-semibold" for="est_minerval{{ r.id }}">Est un Frais Scolaire (Minerval)</label>
+                                                                    </div>
+                                                                    <div class="form-check form-switch">
+                                                                        <input class="form-check-input" type="checkbox" name="est_inscription" id="est_inscription{{ r.id }}" {% if r.est_inscription %}checked{% endif %}>
+                                                                        <label class="form-check-label fw-semibold" for="est_inscription{{ r.id }}">Est le Frais d'Inscription par défaut</label>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                                <button type="submit" class="btn btn-primary fw-bold">Enregistrer les modifications</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                         {% endfor %}
                                     {% else %}
                                         <tr>
