@@ -6,7 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'la_charite_secret_key_2026'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ecole.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///ecole.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -59,6 +59,10 @@ class Paiement(db.Model):
     reference_bordereau = db.Column(db.String(50))
     date_paiement = db.Column(db.DateTime, default=datetime.now)
 
+# Création automatique des tables sur Render au démarrage
+with app.app_context():
+    db.create_all()
+
 # ==========================================
 # ROUTES PRINCIPALES
 # ==========================================
@@ -100,7 +104,7 @@ def inscriptions():
         )
         db.session.add(nouvel_eleve)
         db.session.commit()
-        flash(f"Élève inscrit avec succès ! Matricule attribué : {matricule}", "success")
+        flash(f"Élève inscrit avec succès ! Matricule : {matricule}", "success")
         return redirect(url_for('inscriptions'))
 
     eleves = Eleve.query.order_by(Eleve.id.desc()).all()
@@ -115,9 +119,9 @@ def paiements():
     if request.method == 'POST':
         eleve_id = request.form.get('eleve_id')
         rubrique_id = request.form.get('rubrique_id')
-        montant = float(request.form.get('montant'))
-        mode = request.form.get('mode_paiement')
-        ref = request.form.get('reference_bordereau')
+        montant = float(request.form.get('montant', 0))
+        mode = request.form.get('mode_paiement', 'Cash')
+        ref = request.form.get('reference_bordereau', '')
 
         count = Paiement.query.count() + 1
         num_recu = f"REC-2026-{count:04d}"
@@ -132,27 +136,27 @@ def paiements():
         )
         db.session.add(nouveau_paiement)
         db.session.commit()
-        flash(f"Paiement enregistré avec succès ! Reçu N° {num_recu}", "success")
+        flash(f"Paiement enregistré ! Reçu N° {num_recu}", "success")
         return redirect(url_for('paiements'))
 
     rubriques_admin = RubriqueFrais.query.filter(RubriqueFrais.nom.notilike("%inscription%")).all()
     eleves = Eleve.query.order_by(Eleve.nom_complet).all()
     historique_paiements = Paiement.query.order_by(Paiement.id.desc()).all()
 
+    # Calcul sécurisé des soldes
     soldes = {}
     for el in eleves:
-        soldes[el.id] = {}
+        soldes[str(el.id)] = {}
         for rub in rubriques_admin:
             total_paye = db.session.query(db.func.sum(Paiement.montant)).filter(
                 Paiement.eleve_id == el.id, 
                 Paiement.rubrique_id == rub.id
             ).scalar() or 0.0
-            soldes[el.id][rub.id] = {
-                'paye': total_paye,
-                'reste': max(0.0, rub.montant - total_paye)
+            soldes[str(el.id)][str(rub.id)] = {
+                'paye': float(total_paye),
+                'reste': float(max(0.0, rub.montant - total_paye))
             }
 
-    # Conversion sécurisée en JSON ici
     return render_template('paiements.html', 
                            eleves=eleves, 
                            rubriques=rubriques_admin, 
@@ -160,42 +164,43 @@ def paiements():
                            soldes=json.dumps(soldes))
 
 # ==========================================
-# ROUTE DE REMPLISSAGE RAPIDE (DONNÉES TEST)
+# ROUTE DE REINITIALISATION ET SIMULATION (SEED)
 # ==========================================
 
 @app.route('/seed')
 def seed_data():
-    db.drop_all()
-    db.create_all()
+    try:
+        db.drop_all()
+        db.create_all()
 
-    r_inscr = RubriqueFrais(nom="Frais d'inscription", montant=50.0, description="Admission obligatoire")
-    r_t1 = RubriqueFrais(nom="Minerval - 1er Trimestre", montant=150.0, description="Scolarité T1")
-    r_t2 = RubriqueFrais(nom="Minerval - 2ème Trimestre", montant=150.0, description="Scolarité T2")
-    r_tech = RubriqueFrais(nom="Frais Techniques & Labo", montant=30.0, description="Matériel informatique")
-    r_bulletin = RubriqueFrais(nom="Frais de Bulletin", montant=10.0, description="Édition bulletins")
+        r_inscr = RubriqueFrais(nom="Frais d'inscription", montant=50.0, description="Admission obligatoire")
+        r_t1 = RubriqueFrais(nom="Minerval - 1er Trimestre", montant=150.0, description="Scolarité T1")
+        r_t2 = RubriqueFrais(nom="Minerval - 2ème Trimestre", montant=150.0, description="Scolarité T2")
+        r_tech = RubriqueFrais(nom="Frais Techniques & Labo", montant=30.0, description="Matériel informatique")
+        r_bulletin = RubriqueFrais(nom="Frais de Bulletin", montant=10.0, description="Édition bulletins")
 
-    db.session.add_all([r_inscr, r_t1, r_t2, r_tech, r_bulletin])
-    db.session.commit()
+        db.session.add_all([r_inscr, r_t1, r_t2, r_tech, r_bulletin])
+        db.session.commit()
 
-    e1 = Eleve(matricule="2026-CSC-001", nom_complet="KABANGA MPOYI Christian", sexe="M", date_naissance="2019-04-12", lieu_naissance="Kinshasa", adresse="Av. Lukusa N° 45, Gombe", nom_pere="KABANGA Joseph", tel_pere="+243810000001", section="Maternelle", classe="3ème Maternelle")
-    e2 = Eleve(matricule="2026-CSC-002", nom_complet="NDAYA KASONGO Grace", sexe="F", date_naissance="2016-08-20", lieu_naissance="Lubumbashi", adresse="Av. Kasa-Vubu N° 102, Ngiri-Ngiri", nom_pere="KASONGO Alain", tel_pere="+243810000002", section="Primaire", classe="4ème Primaire")
-    e3 = Eleve(matricule="2026-CSC-003", nom_complet="MUKENDI MUTOMBO Daniel", sexe="M", date_naissance="2012-01-15", lieu_naissance="Kinshasa", adresse="Av. Université N° 88, Makala", nom_pere="MUTOMBO Pierre", tel_pere="+243810000003", section="EB", classe="8ème EB")
-    e4 = Eleve(matricule="2026-CSC-004", nom_complet="TSHIBOLA LUKUSA Esther", sexe="F", date_naissance="2009-11-05", lieu_naissance="Mbuji-Mayi", adresse="Av. Huileries N° 14, Lingwala", nom_pere="LUKUSA François", tel_pere="+243810000004", section="Humanités", classe="3ème Humanités", option="Commerciale & Gestion")
+        e1 = Eleve(matricule="2026-CSC-001", nom_complet="KABANGA MPOYI Christian", sexe="M", date_naissance="2019-04-12", lieu_naissance="Kinshasa", adresse="Av. Lukusa N° 45, Gombe", nom_pere="KABANGA Joseph", tel_pere="+243810000001", section="Maternelle", classe="3ème Maternelle")
+        e2 = Eleve(matricule="2026-CSC-002", nom_complet="NDAYA KASONGO Grace", sexe="F", date_naissance="2016-08-20", lieu_naissance="Lubumbashi", adresse="Av. Kasa-Vubu N° 102, Ngiri-Ngiri", nom_pere="KASONGO Alain", tel_pere="+243810000002", section="Primaire", classe="4ème Primaire")
+        e3 = Eleve(matricule="2026-CSC-003", nom_complet="MUKENDI MUTOMBO Daniel", sexe="M", date_naissance="2012-01-15", lieu_naissance="Kinshasa", adresse="Av. Université N° 88, Makala", nom_pere="MUTOMBO Pierre", tel_pere="+243810000003", section="EB", classe="8ème EB")
+        e4 = Eleve(matricule="2026-CSC-004", nom_complet="TSHIBOLA LUKUSA Esther", sexe="F", date_naissance="2009-11-05", lieu_naissance="Mbuji-Mayi", adresse="Av. Huileries N° 14, Lingwala", nom_pere="LUKUSA François", tel_pere="+243810000004", section="Humanités", classe="3ème Humanités", option="Commerciale & Gestion")
 
-    db.session.add_all([e1, e2, e3, e4])
-    db.session.commit()
+        db.session.add_all([e1, e2, e3, e4])
+        db.session.commit()
 
-    p1 = Paiement(numero_recu="REC-2026-0001", eleve_id=e1.id, rubrique_id=r_t1.id, montant=150.0, mode_paiement="Cash")
-    p2 = Paiement(numero_recu="REC-2026-0002", eleve_id=e2.id, rubrique_id=r_t1.id, montant=100.0, mode_paiement="Cash")
-    p3 = Paiement(numero_recu="REC-2026-0003", eleve_id=e4.id, rubrique_id=r_tech.id, montant=30.0, mode_paiement="Mobile Money")
+        p1 = Paiement(numero_recu="REC-2026-0001", eleve_id=e1.id, rubrique_id=r_t1.id, montant=150.0, mode_paiement="Cash")
+        p2 = Paiement(numero_recu="REC-2026-0002", eleve_id=e2.id, rubrique_id=r_t1.id, montant=100.0, mode_paiement="Cash")
+        p3 = Paiement(numero_recu="REC-2026-0003", eleve_id=e4.id, rubrique_id=r_tech.id, montant=30.0, mode_paiement="Mobile Money")
 
-    db.session.add_all([p1, p2, p3])
-    db.session.commit()
+        db.session.add_all([p1, p2, p3])
+        db.session.commit()
 
-    flash("Base de données initialisée avec succès avec des données de test !", "success")
-    return redirect(url_for('index'))
+        flash("Base de données réinitialisée et remplie sur Render !", "success")
+        return redirect(url_for('index'))
+    except Exception as e:
+        return f"Erreur de réinitialisation : {str(e)}", 500
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
