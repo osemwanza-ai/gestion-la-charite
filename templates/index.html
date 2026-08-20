@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord - CS La Charité</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f4f6f9; font-family: system-ui, -apple-system, sans-serif; }
+        .card-custom { border: none; border-radius: 12px; }
+        .stat-card { border-radius: 12px; padding: 20px; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-primary m-0">Complexe Scolaire La Charité</h2>
+            <p class="text-muted small m-0">Système de Gestion Scolaire & Financière</p>
+        </div>
+        <div>
+            <a href="{{ url_for('inscription') }}" class="btn btn-success btn-sm fw-bold me-2">
+                <i class="fa-solid fa-user-plus me-1"></i> Nouvel Élève
+            </a>
+            <a href="{{ url_for('paiement') }}" class="btn btn-primary btn-sm fw-bold">
+                <i class="fa-solid fa-cash-register me-1"></i> Nouveau Paiement
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="stat-card bg-primary shadow-sm">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-white-50 text-uppercase fw-bold">Total Élèves Inscrits</small>
+                        <h2 class="fw-bold m-0 mt-1">{{ total_eleves }}</h2>
+                    </div>
+                    <i class="fa-solid fa-users fa-3x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="stat-card bg-success shadow-sm">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-white-50 text-uppercase fw-bold">Total Recouvré</small>
+                        <h2 class="fw-bold m-0 mt-1">{{ "{:,.0f}".format(total_recouvre) }} FC</h2>
+                    </div>
+                    <i class="fa-solid fa-wallet fa-3x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation & Derniers paiements -->
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card card-custom bg-white shadow-sm p-3">
+                <h5 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-bars me-2"></i>Menu principal</h5>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('liste_eleves') }}" class="list-group-item list-group-item-action py-3 fw-bold text-primary">
+                        <i class="fa-solid fa-address-book me-2"></i> Répertoire des élèves
+                    </a>
+                    <a href="{{ url_for('inscription') }}" class="list-group-item list-group-item-action py-3 fw-bold text-success">
+                        <i class="fa-solid fa-user-plus me-2"></i> Formulaire d'inscription
+                    </a>
+                    <a href="{{ url_for('paiement') }}" class="list-group-item list-group-item-action py-3 fw-bold text-dark">
+                        <i class="fa-solid fa-file-invoice-dollar me-2"></i> Guichet de paiement
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card card-custom bg-white shadow-sm p-4">
+                <h5 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-clock-rotate-left me-2"></i>Derniers paiements enregistrés</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Élève</th>
+                                <th>Montant</th>
+                                <th>Trimestre</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in derniers_paiements %}
+                            <tr>
+                                <td class="fw-bold">{{ p.eleve.nom_complet }}</td>
+                                <td class="text-success fw-bold">{{ "{:,.0f}".format(p.montant) }} FC</td>
+                                <td>{{ p.trimestre or '-' }}</td>
+                                <td class="small text-muted">{{ p.date_paiement.strftime('%d/%m/%Y %H:%M') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">Aucun paiement récent.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
