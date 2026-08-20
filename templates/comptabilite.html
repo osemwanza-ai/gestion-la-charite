@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>Ajuster les Quotas (%)</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-2">
+                        <label class="form-label">Masse Salariale (%)</label>
+                        <input type="number" step="0.1" name="pct_salaires" class="form-control" value="{{ config.pct_salaires }}" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Fonctionnement (%)</label>
+                        <input type="number" step="0.1" name="pct_fonctionnement" class="form-control" value="{{ config.pct_fonctionnement }}" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Promoteur / Fondateur (%)</label>
+                        <input type="number" step="0.1" name="pct_promoteur" class="form-control" value="{{ config.pct_promoteur }}" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Matériel & Labo (%)</label>
+                        <input type="number" step="0.1" name="pct_materiel" class="form-control" value="{{ config.pct_materiel }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Réserve Urgences (%)</label>
+                        <input type="number" step="0.1" name="pct_reserve" class="form-control" value="{{ config.pct_reserve }}" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 fw-bold">Mettre à jour les quotas</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Ventilation Automatique des Minervals</h5>
+            </div>
+            <div class="card-body text-center bg-light">
+                <h6>Cumul Total Minerval Perçu :</h6>
+                <h2 class="text-success fw-bold">{{ "{:,.0f}".format(total_minerval) }} CDF</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Affectation</th>
+                            <th>Quota</th>
+                            <th>Montant Réparti (CDF)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Masse Salariale Enseignants</td>
+                            <td><span class="badge bg-primary">{{ config.pct_salaires }}%</span></td>
+                            <td class="fw-bold">{{ "{:,.0f}".format(part_salaires) }} CDF</td>
+                        </tr>
+                        <tr>
+                            <td>Frais de Fonctionnement</td>
+                            <td><span class="badge bg-secondary">{{ config.pct_fonctionnement }}%</span></td>
+                            <td class="fw-bold">{{ "{:,.0f}".format(part_fonctionnement) }} CDF</td>
+                        </tr>
+                        <tr>
+                            <td>Quota Promoteur</td>
+                            <td><span class="badge bg-success">{{ config.pct_promoteur }}%</span></td>
+                            <td class="fw-bold">{{ "{:,.0f}".format(part_promoteur) }} CDF</td>
+                        </tr>
+                        <tr>
+                            <td>Matériel Didactique & Labo</td>
+                            <td><span class="badge bg-info">{{ config.pct_materiel }}%</span></td>
+                            <td class="fw-bold">{{ "{:,.0f}".format(part_materiel) }} CDF</td>
+                        </tr>
+                        <tr>
+                            <td>Réserve & Urgences</td>
+                            <td><span class="badge bg-danger">{{ config.pct_reserve }}%</span></td>
+                            <td class="fw-bold">{{ "{:,.0f}".format(part_reserve) }} CDF</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
