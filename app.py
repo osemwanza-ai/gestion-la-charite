@@ -55,10 +55,20 @@ class Paiement(db.Model):
 
 
 # ==========================================
-# INITIALISATION DE LA BASE DE DONNÉES
+# INITIALISATION
 # ==========================================
 with app.app_context():
     db.create_all()
+
+
+# Fonction utilitaire pour trouver le frais d'inscription
+def obtenir_frais_inscription():
+    rubriques = RubriqueFrais.query.all()
+    for r in rubriques:
+        nom_clean = r.nom.lower().replace("'", "").replace("’", "").replace(" ", "")
+        if 'inscription' in nom_clean:
+            return r
+    return None
 
 
 # ==========================================
@@ -79,7 +89,7 @@ def admin():
         action = request.form.get('action')
         
         if action == 'ajouter_rubrique':
-            nom = request.form.get('nom')
+            nom = request.form.get('nom', '').strip()
             montant = float(request.form.get('montant', 0))
             section = request.form.get('section')
             
@@ -102,12 +112,62 @@ def admin():
     return render_template('admin.html', rubriques=rubriques)
 
 
+@app.route('/inscription', methods=['GET', 'POST'])
+def inscription():
+    # Détection automatique du frais d'inscription défini dans l'admin
+    frais_inscription = obtenir_frais_inscription()
+
+    if request.method == 'POST':
+        # Bloquer si le frais n'existe toujours pas dans la base
+        if not frais_inscription:
+            flash("Blocage : Veuillez d'abord définir le frais d'inscription dans l'Espace Administrateur.", "danger")
+            return redirect(url_for('inscription'))
+
+        dernier_eleve = Eleve.query.order_by(Eleve.id.desc()).first()
+        next_id = (dernier_eleve.id + 1) if dernier_eleve else 1
+        matricule = f"CSC-{datetime.now().year}-{next_id:04d}"
+
+        # 1. Enregistrement de l'élève
+        nouvel_eleve = Eleve(
+            matricule=matricule,
+            nom_complet=request.form.get('nom_complet'),
+            sexe=request.form.get('sexe'),
+            date_naissance=request.form.get('date_naissance'),
+            lieu_naissance=request.form.get('lieu_naissance'),
+            adresse=request.form.get('adresse'),
+            section=request.form.get('section'),
+            classe=request.form.get('classe'),
+            option=request.form.get('option'),
+            nom_responsables=request.form.get('nom_responsables'),
+            lien_parente=request.form.get('lien_parente'),
+            telephone_principal=request.form.get('telephone_principal'),
+            telephone_secondaire=request.form.get('telephone_secondaire')
+        )
+        db.session.add(nouvel_eleve)
+        db.session.flush() # Récupère l'ID généré pour l'élève
+
+        # 2. Comptabilisation automatique du paiement du frais d'inscription
+        paiement_inscription = Paiement(
+            eleve_id=nouvel_eleve.id,
+            rubrique_id=frais_inscription.id,
+            montant=frais_inscription.montant,
+            trimestre="Inscription",
+            mode_paiement="Espèces"
+        )
+        db.session.add(paiement_inscription)
+        
+        db.session.commit()
+        flash(f"Élève inscrit avec succès ! Le frais d'inscription de {frais_inscription.montant:,.0f} FC a été comptabilisé.", 'success')
+        return redirect(url_for('liste_eleves'))
+
+    return render_template('inscription.html', frais_inscription=frais_inscription)
+
+
 @app.route('/eleves')
 def liste_eleves():
     nom_filter = request.args.get('nom', '').strip()
     section_filter = request.args.get('section', '')
     classe_filter = request.args.get('classe', '').strip()
-    statut_filter = request.args.get('statut', '')
 
     query = Eleve.query
 
@@ -134,40 +194,7 @@ def liste_eleves():
             'total_du': total_frais_fixe
         })
 
-    return render_template('eleves.html', eleves_data=eleves_data, nom_sel=nom_filter, section_sel=section_filter, classe_sel=classe_filter, statut_sel=statut_filter)
-
-
-@app.route('/inscription', methods=['GET', 'POST'])
-def inscription():
-    rubriques = RubriqueFrais.query.all()
-    frais_inscription = next((r for r in rubriques if 'inscription' in r.nom.lower()), None)
-
-    if request.method == 'POST':
-        dernier_eleve = Eleve.query.order_by(Eleve.id.desc()).first()
-        next_id = (dernier_eleve.id + 1) if dernier_eleve else 1
-        matricule = f"CSC-{datetime.now().year}-{next_id:04d}"
-
-        nouvel_eleve = Eleve(
-            matricule=matricule,
-            nom_complet=request.form.get('nom_complet'),
-            sexe=request.form.get('sexe'),
-            date_naissance=request.form.get('date_naissance'),
-            lieu_naissance=request.form.get('lieu_naissance'),
-            adresse=request.form.get('adresse'),
-            section=request.form.get('section'),
-            classe=request.form.get('classe'),
-            option=request.form.get('option'),
-            nom_responsables=request.form.get('nom_responsables'),
-            lien_parente=request.form.get('lien_parente'),
-            telephone_principal=request.form.get('telephone_principal'),
-            telephone_secondaire=request.form.get('telephone_secondaire')
-        )
-        db.session.add(nouvel_eleve)
-        db.session.commit()
-        flash('Élève inscrit avec succès !', 'success')
-        return redirect(url_for('liste_eleves'))
-
-    return render_template('inscription.html', frais_inscription=frais_inscription)
+    return render_template('eleves.html', eleves_data=eleves_data, nom_sel=nom_filter, section_sel=section_filter, classe_sel=classe_filter)
 
 
 @app.route('/paiement', methods=['GET', 'POST'])
