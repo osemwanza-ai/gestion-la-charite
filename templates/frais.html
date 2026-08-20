@@ -1,66 +1,67 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4"><i class="bi bi-gear-fill me-2"></i>Administration des Frais Scolaires</h2>
-
-    <div class="row">
-        <div class="col-md-5">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Ajouter une Rubrique de Frais</h5>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('admin_frais') }}">
-                        <div class="mb-3">
-                            <label class="form-label">Nom de la rubrique *</label>
-                            <input type="text" name="nom" class="form-control" placeholder="Ex: Minerval - 3ème Trimestre" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Montant à payer ($ USD) *</label>
-                            <input type="number" step="0.01" name="montant" class="form-control" placeholder="150.00" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Description / Détails</label>
-                            <textarea name="description" class="form-control" rows="3" placeholder="Informations complémentaires..."></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-success w-100">
-                            <i class="bi bi-plus-circle me-1"></i>Enregistrer la rubrique
-                        </button>
-                    </form>
-                </div>
+<div class="row">
+    <div class="col-md-5">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Ajouter une Rubrique (CDF)</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Nom de la rubrique *</label>
+                        <input type="text" name="nom" class="form-control" placeholder="Ex: Minerval - 1er Trimestre" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Montant en Francs Congolais (CDF) *</label>
+                        <input type="number" step="500" name="montant_cdf" class="form-control" placeholder="375000" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="est_minerval" id="est_minerval">
+                        <label class="form-check-label" for="est_minerval">Est un Minerval (Soumis au quota)</label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="est_inscription" id="est_inscription">
+                        <label class="form-check-label" for="est_inscription">Est le frais d'Inscription obligatoire</label>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">Enregistrer la rubrique</button>
+                </form>
             </div>
         </div>
-
-        <div class="col-md-7">
-            <div class="card shadow-sm">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">Rubriques Configurées</h5>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Rubrique</th>
-                                <th>Montant ($)</th>
-                                <th>Description</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for rub in rubriques %}
-                            <tr>
-                                <td><strong>{{ rub.nom }}</strong></td>
-                                <td class="text-success fw-bold">{{ "%.2f"|format(rub.montant) }} $</td>
-                                <td>{{ rub.description or '-' }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="3" class="text-center py-4 text-muted">Aucune rubrique configurée.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+    </div>
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Rubriques Configurées</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Rubrique</th>
+                            <th>Montant (CDF)</th>
+                            <th>Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in rubriques %}
+                        <tr>
+                            <td><strong>{{ r.nom }}</strong></td>
+                            <td class="text-success fw-bold">{{ "{:,.0f}".format(r.montant_cdf) }} CDF</td>
+                            <td>
+                                {% if r.est_inscription %}<span class="badge bg-warning text-dark">Inscription</span>{% endif %}
+                                {% if r.est_minerval %}<span class="badge bg-info">Minerval</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center py-3 text-muted">Aucune rubrique créée.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
