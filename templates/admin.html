@@ -55,7 +55,7 @@
                             
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Nom de la rubrique</label>
-                                <input type="text" name="nom" class="form-control" placeholder="ex: Inscription Maternelle, Frais Examens Humanité" required>
+                                <input type="text" name="nom" class="form-control" placeholder="ex: Minerval, Frais Bulletin, Inscription" required>
                             </div>
 
                             <div class="mb-3">
@@ -66,27 +66,69 @@
                                 </div>
                             </div>
 
-                            <!-- Ciblage Section & Option -->
-                            <div class="row g-2 mb-3">
-                                <div class="col-6">
-                                    <label class="form-label fw-semibold">Section concernée</label>
-                                    <select name="section_cible" class="form-select">
-                                        <option value="Toutes">Toutes les sections</option>
-                                        <option value="Maternelle">Maternelle</option>
-                                        <option value="Primaire">Primaire</option>
-                                        <option value="Secondaire">Secondaire</option>
-                                        <option value="Humanité">Humanité</option>
-                                    </select>
+                            <!-- Cases à cocher : Sections concernées -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold d-block">Sections concernées (cocher tout ce qui s'applique)</label>
+                                <div class="bg-white p-3 rounded border">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="sections" value="Maternelle" id="sec_mat">
+                                        <label class="form-check-label" for="sec_mat">Maternelle</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="sections" value="Primaire" id="sec_prim">
+                                        <label class="form-check-label" for="sec_prim">Primaire</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="sections" value="Secondaire" id="sec_sec">
+                                        <label class="form-check-label" for="sec_sec">Secondaire (Base)</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="sections" value="Humanité" id="sec_hum">
+                                        <label class="form-check-label" for="sec_hum">Humanité</label>
+                                    </div>
+                                    <div class="form-text text-muted small">Si aucune case n'est cochée, la rubrique s'appliquera à <strong>Toutes les sections</strong>.</div>
                                 </div>
-                                <div class="col-6">
-                                    <label class="form-label fw-semibold">Option / Précision</label>
-                                    <input type="text" name="option_cible" class="form-control" placeholder="ex: Math-Info, Commerciale, Toutes">
+                            </div>
+
+                            <!-- Cases à cocher : Options concernées -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold d-block">Options concernées (Humanité)</label>
+                                <div class="bg-white p-3 rounded border" style="max-height: 160px; overflow-y: auto;">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="options" value="Pédagogie Générale" id="opt_ped">
+                                        <label class="form-check-label" for="opt_ped">Pédagogie Générale</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="options" value="Commerciale & Gestion" id="opt_com">
+                                        <label class="form-check-label" for="opt_com">Commerciale & Gestion</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="options" value="Math-Info" id="opt_math">
+                                        <label class="form-check-label" for="opt_math">Mathématiques-Informatique</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="options" value="Chimie-Biologie" id="opt_bio">
+                                        <label class="form-check-label" for="opt_bio">Chimie-Biologie</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="options" value="Littéraire" id="opt_lit">
+                                        <label class="form-check-label" for="opt_lit">Littéraire</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="options" value="Électricité" id="opt_elec">
+                                        <label class="form-check-label" for="opt_elec">Électricité</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="options" value="Mécanique Générale" id="opt_mec">
+                                        <label class="form-check-label" for="opt_mec">Mécanique Générale</label>
+                                    </div>
                                 </div>
+                                <div class="form-text text-muted small">Si aucune option n'est cochée, le frais s'appliquera à <strong>Toutes les options</strong>.</div>
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Description</label>
-                                <textarea name="description" class="form-control" rows="2" placeholder="Précisions complémentaires..."></textarea>
+                                <textarea name="description" class="form-control" rows="2" placeholder="Informations complémentaires..."></textarea>
                             </div>
 
                             <div class="mb-3 bg-light p-3 rounded border">
@@ -120,7 +162,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>Rubrique</th>
-                                        <th>Cible</th>
+                                        <th>Cibles (Sections/Options)</th>
                                         <th>Montant</th>
                                         <th>Type</th>
                                         <th class="text-end">Actions</th>
@@ -136,11 +178,17 @@
                                                     <small class="text-muted">{{ r.description or '-' }}</small>
                                                 </td>
                                                 <td>
-                                                    <span class="badge bg-light text-dark border">
-                                                        {{ r.section_cible or 'Toutes' }}
-                                                    </span>
-                                                    {% if r.option_cible and r.option_cible != 'Toutes' %}
-                                                        <br><small class="text-primary fw-bold">{{ r.option_cible }}</small>
+                                                    <div>
+                                                        <span class="badge bg-primary">
+                                                            <i class="bi bi-building me-1"></i>{{ r.sections_cibles or r.section_cible or 'Toutes' }}
+                                                        </span>
+                                                    </div>
+                                                    {% if r.options_cibles and r.options_cibles != 'Toutes' %}
+                                                        <div class="mt-1">
+                                                            <span class="badge bg-info text-dark">
+                                                                <i class="bi bi-journal-bookmark me-1"></i>{{ r.options_cibles }}
+                                                            </span>
+                                                        </div>
                                                     {% endif %}
                                                 </td>
                                                 <td class="text-nowrap fw-bold text-success">
@@ -173,7 +221,7 @@
                                                 </td>
                                             </tr>
 
-                                            <!-- Modal Modification -->
+                                            <!-- Modal Modification avec Cases à cocher -->
                                             <div class="modal fade" id="editModal{{ r.id }}" tabindex="-1">
                                                 <div class="modal-dialog">
                                                     <div class="modal-content">
@@ -194,26 +242,72 @@
                                                                         <span class="input-group-text">CDF</span>
                                                                     </div>
                                                                 </div>
-                                                                <div class="row g-2 mb-3">
-                                                                    <div class="col-6">
-                                                                        <label class="form-label fw-semibold">Section concernée</label>
-                                                                        <select name="section_cible" class="form-select">
-                                                                            <option value="Toutes" {% if r.section_cible == 'Toutes' %}selected{% endif %}>Toutes les sections</option>
-                                                                            <option value="Maternelle" {% if r.section_cible == 'Maternelle' %}selected{% endif %}>Maternelle</option>
-                                                                            <option value="Primaire" {% if r.section_cible == 'Primaire' %}selected{% endif %}>Primaire</option>
-                                                                            <option value="Secondaire" {% if r.section_cible == 'Secondaire' %}selected{% endif %}>Secondaire</option>
-                                                                            <option value="Humanité" {% if r.section_cible == 'Humanité' %}selected{% endif %}>Humanité</option>
-                                                                        </select>
-                                                                    </div>
-                                                                    <div class="col-6">
-                                                                        <label class="form-label fw-semibold">Option / Précision</label>
-                                                                        <input type="text" name="option_cible" class="form-control" value="{{ r.option_cible or 'Toutes' }}">
+
+                                                                <!-- Cases à cocher Sections -->
+                                                                {% set sec_list = (r.sections_cibles or r.section_cible or '').split(', ') %}
+                                                                <div class="mb-3">
+                                                                    <label class="form-label fw-semibold d-block">Sections concernées</label>
+                                                                    <div class="bg-light p-3 rounded border">
+                                                                        <div class="form-check">
+                                                                            <input class="form-check-input" type="checkbox" name="sections" value="Maternelle" id="m_sec_mat{{ r.id }}" {% if 'Maternelle' in sec_list %}checked{% endif %}>
+                                                                            <label class="form-check-label" for="m_sec_mat{{ r.id }}">Maternelle</label>
+                                                                        </div>
+                                                                        <div class="form-check">
+                                                                            <input class="form-check-input" type="checkbox" name="sections" value="Primaire" id="m_sec_prim{{ r.id }}" {% if 'Primaire' in sec_list %}checked{% endif %}>
+                                                                            <label class="form-check-label" for="m_sec_prim{{ r.id }}">Primaire</label>
+                                                                        </div>
+                                                                        <div class="form-check">
+                                                                            <input class="form-check-input" type="checkbox" name="sections" value="Secondaire" id="m_sec_sec{{ r.id }}" {% if 'Secondaire' in sec_list %}checked{% endif %}>
+                                                                            <label class="form-check-label" for="m_sec_sec{{ r.id }}">Secondaire (Base)</label>
+                                                                        </div>
+                                                                        <div class="form-check">
+                                                                            <input class="form-check-input" type="checkbox" name="sections" value="Humanité" id="m_sec_hum{{ r.id }}" {% if 'Humanité' in sec_list %}checked{% endif %}>
+                                                                            <label class="form-check-label" for="m_sec_hum{{ r.id }}">Humanité</label>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
+
+                                                                <!-- Cases à cocher Options -->
+                                                                {% set opt_list = (r.options_cibles or r.option_cible or '').split(', ') %}
+                                                                <div class="mb-3">
+                                                                    <label class="form-label fw-semibold d-block">Options concernées</label>
+                                                                    <div class="bg-light p-3 rounded border" style="max-height: 150px; overflow-y: auto;">
+                                                                        <div class="form-check">
+                                                                            <input class="form-check-input" type="checkbox" name="options" value="Pédagogie Générale" id="m_opt_ped{{ r.id }}" {% if 'Pédagogie Générale' in opt_list %}checked{% endif %}>
+                                                                            <label class="form-check-label" for="m_opt_ped{{ r.id }}">Pédagogie Générale</label>
+                                                                        </div>
+                                                                        <div class="form-check">
+                                                                            <input class="form-check-input" type="checkbox" name="options" value="Commerciale & Gestion" id="m_opt_com{{ r.id }}" {% if 'Commerciale & Gestion' in opt_list %}checked{% endif %}>
+                                                                            <label class="form-check-label" for="m_opt_com{{ r.id }}">Commerciale & Gestion</label>
+                                                                        </div>
+                                                                        <div class="form-check">
+                                                                            <input class="form-check-input" type="checkbox" name="options" value="Math-Info" id="m_opt_math{{ r.id }}" {% if 'Math-Info' in opt_list %}checked{% endif %}>
+                                                                            <label class="form-check-label" for="m_opt_math{{ r.id }}">Mathématiques-Informatique</label>
+                                                                        </div>
+                                                                        <div class="form-check">
+                                                                            <input class="form-check-input" type="checkbox" name="options" value="Chimie-Biologie" id="m_opt_bio{{ r.id }}" {% if 'Chimie-Biologie' in opt_list %}checked{% endif %}>
+                                                                            <label class="form-check-label" for="m_opt_bio{{ r.id }}">Chimie-Biologie</label>
+                                                                        </div>
+                                                                        <div class="form-check">
+                                                                            <input class="form-check-input" type="checkbox" name="options" value="Littéraire" id="m_opt_lit{{ r.id }}" {% if 'Littéraire' in opt_list %}checked{% endif %}>
+                                                                            <label class="form-check-label" for="m_opt_lit{{ r.id }}">Littéraire</label>
+                                                                        </div>
+                                                                        <div class="form-check">
+                                                                            <input class="form-check-input" type="checkbox" name="options" value="Électricité" id="m_opt_elec{{ r.id }}" {% if 'Électricité' in opt_list %}checked{% endif %}>
+                                                                            <label class="form-check-label" for="m_opt_elec{{ r.id }}">Électricité</label>
+                                                                        </div>
+                                                                        <div class="form-check">
+                                                                            <input class="form-check-input" type="checkbox" name="options" value="Mécanique Générale" id="m_opt_mec{{ r.id }}" {% if 'Mécanique Générale' in opt_list %}checked{% endif %}>
+                                                                            <label class="form-check-label" for="m_opt_mec{{ r.id }}">Mécanique Générale</label>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
                                                                 <div class="mb-3">
                                                                     <label class="form-label fw-semibold">Description</label>
                                                                     <textarea name="description" class="form-control" rows="2">{{ r.description or '' }}</textarea>
                                                                 </div>
+
                                                                 <div class="mb-3 bg-light p-3 rounded border">
                                                                     <div class="form-check form-switch mb-2">
                                                                         <input class="form-check-input" type="checkbox" name="est_minerval" id="est_minerval{{ r.id }}" {% if r.est_minerval %}checked{% endif %}>
