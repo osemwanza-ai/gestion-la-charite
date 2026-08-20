@@ -4,7 +4,6 @@
 <div class="container mt-4">
     <h2 class="mb-4"><i class="bi bi-cash-coin me-2"></i>Gestion du Paiement des Frais Scolaires</h2>
 
-    <!-- Formulaire d'encaissement -->
     <div class="card shadow-sm mb-5">
         <div class="card-header bg-primary text-white">
             <h5 class="mb-0">Enregistrer un Nouveau Versement</h5>
@@ -12,7 +11,6 @@
         <div class="card-body">
             <form method="POST" action="{{ url_for('paiements') }}">
                 <div class="row g-3">
-                    <!-- Sélection de l'élève -->
                     <div class="col-md-6">
                         <label class="form-label font-weight-bold">1. Sélectionner l'Élève *</label>
                         <select name="eleve_id" id="eleve_select" class="form-select" required onchange="updateRubriques()">
@@ -23,9 +21,8 @@
                         </select>
                     </div>
 
-                    <!-- Rubrique pré-créée en Administration -->
                     <div class="col-md-6">
-                        <label class="form-label font-weight-bold">2. Rubrique à Payée (Préalablement définie) *</label>
+                        <label class="form-label font-weight-bold">2. Rubrique à Payée *</label>
                         <select name="rubrique_id" id="rubrique_select" class="form-select" required onchange="updateMontantInfo()">
                             <option value="" selected disabled>-- Sélectionner d'abord un élève --</option>
                             {% for rub in rubriques %}
@@ -36,7 +33,6 @@
                         </select>
                     </div>
 
-                    <!-- Encart d'information sur le solde -->
                     <div class="col-12" id="solde_info_box" style="display: none;">
                         <div class="alert alert-info d-flex justify-content-between align-items-center mb-0">
                             <div>
@@ -49,7 +45,6 @@
                         </div>
                     </div>
 
-                    <!-- Montant versé et Mode -->
                     <div class="col-md-4">
                         <label class="form-label">Montant Versé ($ USD) *</label>
                         <input type="number" step="0.01" name="montant" id="montant_input" class="form-control" placeholder="0.00" required>
@@ -65,7 +60,7 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">N° Bordereau / Référence (Optionnel)</label>
+                        <label class="form-label">N° Bordereau / Référence</label>
                         <input type="text" name="reference_bordereau" class="form-control" placeholder="Ex: BDR-88301">
                     </div>
 
@@ -79,7 +74,6 @@
         </div>
     </div>
 
-    <!-- Tableau de l'historique des reçus -->
     <h4 class="mb-3">Historique des Derniers Encaissements</h4>
     <div class="table-responsive bg-white shadow-sm rounded">
         <table class="table table-hover align-middle mb-0">
@@ -119,9 +113,9 @@
     </div>
 </div>
 
-<!-- Script JS pour calcul dynamique du solde -->
 <script>
-const soldesData = {{ soldes|tojson }};
+// Modification sécurisée de l'analyse JSON
+const soldesData = JSON.parse('{{ soldes|safe }}');
 
 function updateRubriques() {
     updateMontantInfo();
