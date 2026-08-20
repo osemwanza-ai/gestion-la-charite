@@ -57,9 +57,7 @@ class Paiement(db.Model):
 # ==========================================
 # INITIALISATION DE LA BASE DE DONNÉES
 # ==========================================
-# Force la suppression de l'ancienne base obsolète et recrée les tables avec la bonne structure
 with app.app_context():
-    db.drop_all()
     db.create_all()
 
 
