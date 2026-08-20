@@ -86,7 +86,7 @@ def admin():
             nouvelle_rubrique = RubriqueFrais(nom=nom, montant=montant, section=section)
             db.session.add(nouvelle_rubrique)
             db.session.commit()
-            flash('Rubrique de frais ajoutée avec succès !', 'success')
+            flash('Frais enregistré avec succès !', 'success')
             
         elif action == 'supprimer_rubrique':
             rubrique_id = request.form.get('rubrique_id')
@@ -139,6 +139,9 @@ def liste_eleves():
 
 @app.route('/inscription', methods=['GET', 'POST'])
 def inscription():
+    rubriques = RubriqueFrais.query.all()
+    frais_inscription = next((r for r in rubriques if 'inscription' in r.nom.lower()), None)
+
     if request.method == 'POST':
         dernier_eleve = Eleve.query.order_by(Eleve.id.desc()).first()
         next_id = (dernier_eleve.id + 1) if dernier_eleve else 1
@@ -164,7 +167,7 @@ def inscription():
         flash('Élève inscrit avec succès !', 'success')
         return redirect(url_for('liste_eleves'))
 
-    return render_template('inscription.html')
+    return render_template('inscription.html', frais_inscription=frais_inscription)
 
 
 @app.route('/paiement', methods=['GET', 'POST'])
