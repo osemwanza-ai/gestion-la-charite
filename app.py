@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
@@ -35,7 +35,7 @@ class Eleve(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     matricule = db.Column(db.String(50), unique=True, nullable=False)
     
-    # 1. Identité Élève
+    # Identité Élève
     nom_complet = db.Column(db.String(150), nullable=False)
     sexe = db.Column(db.String(10), nullable=False)
     date_naissance = db.Column(db.String(20))
@@ -45,30 +45,29 @@ class Eleve(db.Model):
     groupe_sanguin = db.Column(db.String(10))
     allergies_sante = db.Column(db.String(255))
     
-    # 2. Scolarité demandée
+    # Scolarité
     section = db.Column(db.String(50), nullable=False)
     classe = db.Column(db.String(50), nullable=False)
     option = db.Column(db.String(50))
     
-    # 3. Parcours Précédent
+    # Parcours
     ecole_provenance = db.Column(db.String(150))
     pourcentage_obtenu = db.Column(db.String(10))
     
-    # 4. Père (Tuteur 1)
+    # Parents
     nom_pere = db.Column(db.String(100))
     prof_pere = db.Column(db.String(100))
     tel_pere = db.Column(db.String(20))
     tel_pere_wa = db.Column(db.String(20))
     email_pere = db.Column(db.String(100))
     
-    # 5. Mère (Tuteur 2)
     nom_mere = db.Column(db.String(100))
     prof_mere = db.Column(db.String(100))
     tel_mere = db.Column(db.String(20))
     tel_mere_wa = db.Column(db.String(20))
     email_mere = db.Column(db.String(100))
     
-    # 6. Urgence & Responsable
+    # Urgence & Responsable
     contact_urgence_nom = db.Column(db.String(100))
     contact_urgence_lien = db.Column(db.String(50))
     contact_urgence_tel = db.Column(db.String(20))
@@ -140,9 +139,6 @@ def admin_frais():
     rubriques = RubriqueFrais.query.all()
     return render_template('admin.html', rubriques=rubriques, frais=rubriques)
 
-def admin():
-    return admin_frais()
-
 @app.route('/modifier_rubrique/<int:id>', methods=['POST'])
 def modifier_rubrique(id):
     rubrique = RubriqueFrais.query.get_or_404(id)
@@ -186,7 +182,6 @@ def inscriptions():
         section = request.form.get('section')
         option = request.form.get('option')
         
-        # Validation serveur : Obligation de l'option en Humanité
         if section == 'Humanité' and not option:
             flash("L'option est obligatoire pour l'inscription en Humanité.", "danger")
             eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
@@ -252,35 +247,90 @@ def inscriptions():
     eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
     return render_template('inscription.html', eleves=eleves, rubrique_inscr=rubrique_inscr, rubrique=rubrique_inscr)
 
-def inscription():
-    return inscriptions()
+# API pour la recherche d'élève et le calcul de solde par rubrique
+@app.route('/api/eleve_info/<int:eleve_id>')
+def api_eleve_info(eleve_id):
+    eleve = Eleve.query.get_or_404(eleve_id)
+    
+    # Récupération des rubriques éligibles à l'élève
+    rubriques = RubriqueFrais.query.all()
+    rubriques_eligibles = []
+    
+    for r in rubriques:
+        sec_ok = (r.sections_cibles == 'Toutes' or eleve.section in r.sections_cibles.split(', '))
+        opt_ok = True
+        if eleve.section == 'Humanité' and eleve.option and r.options_cibles != 'Toutes':
+            opt_ok = (eleve.option in r.options_cibles.split(', '))
+            
+        if sec_ok and opt_ok:
+            # Calcul du montant déjà payé pour cette rubrique
+            paye = db.session.query(db.func.sum(Paiement.montant_paye_cdf))\
+                .filter(Paiement.eleve_id == eleve.id, Paiement.rubrique_id == r.id).scalar() or 0.0
+            
+            solde = max(0.0, r.montant_cdf - paye)
+            
+            rubriques_eligibles.append({
+                'id': r.id,
+                'nom': r.nom,
+                'total_exige': r.montant_cdf,
+                'deja_paye': paye,
+                'solde_restant': solde
+            })
+            
+    return jsonify({
+        'id': eleve.id,
+        'matricule': eleve.matricule,
+        'nom_complet': eleve.nom_complet,
+        'section': eleve.section,
+        'classe': eleve.classe,
+        'option': eleve.option or '-',
+        'rubriques': rubriques_eligibles
+    })
 
 @app.route('/paiements', methods=['GET', 'POST'])
 def paiements():
     if request.method == 'POST':
         eleve_id = int(request.form.get('eleve_id'))
         rubrique_id = int(request.form.get('rubrique_id'))
-        montant = float(request.form.get('montant_paye_cdf', request.form.get('montant_paye', 0)))
+        montant_paye = float(request.form.get('montant_paye_cdf', 0))
         mode_paiement = request.form.get('mode_paiement', 'Cash')
         
+        eleve = Eleve.query.get_or_404(eleve_id)
+        rubrique = RubriqueFrais.query.get_or_404(rubrique_id)
+        
+        # Vérification serveur du solde restant
+        deja_paye = db.session.query(db.func.sum(Paiement.montant_paye_cdf))\
+            .filter(Paiement.eleve_id == eleve_id, Paiement.rubrique_id == rubrique_id).scalar() or 0.0
+        
+        solde_restant = rubrique.montant_cdf - deja_paye
+        
+        if montant_paye <= 0:
+            flash("Le montant payé doit être supérieur à 0.", "danger")
+            return redirect(url_for('paiements'))
+            
+        if montant_paye > solde_restant + 0.01: # tolérance de calcul
+            flash(f"Impossible de valider : le montant saisi ({montant_paye:,.0f} CDF) dépasse le solde restant ({solde_restant:,.0f} CDF).", "danger")
+            return redirect(url_for('paiements'))
+            
         num_recu = f"REC-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
         nouveau_p = Paiement(
             num_recu=num_recu,
             eleve_id=eleve_id,
             rubrique_id=rubrique_id,
-            montant_paye_cdf=montant,
-            montant_paye=montant,
+            montant_paye_cdf=montant_paye,
+            montant_paye=montant_paye,
             mode_paiement=mode_paiement
         )
         db.session.add(nouveau_p)
         db.session.commit()
-        return redirect(url_for('ticket_pos', paiement_id=nouveau_p.id))
         
-    eleves = Eleve.query.all()
-    rubriques = RubriqueFrais.query.all()
+        # Redirection vers la facture/ticket POS pour impression immédiate
+        return redirect(url_for('ticket_pos', paiement_id=nouveau_p.id, auto_print=1))
+        
+    eleves = Eleve.query.order_by(Eleve.nom_complet.asc()).all()
     historique_paiements = Paiement.query.order_by(Paiement.date_paiement.desc()).all()
-    return render_template('paiements.html', eleves=eleves, rubriques=rubriques, paiements=historique_paiements)
+    return render_template('paiements.html', eleves=eleves, paiements=historique_paiements)
 
 @app.route('/comptabilite', methods=['GET', 'POST'])
 def comptabilite():
@@ -315,7 +365,16 @@ def comptabilite():
 @app.route('/ticket_pos/<int:paiement_id>')
 def ticket_pos(paiement_id):
     paiement = Paiement.query.get_or_404(paiement_id)
-    return render_template('ticket_pos.html', p=paiement, paiement=paiement)
+    
+    # Calcul du total payé à ce jour pour cette rubrique
+    total_paye_rubrique = db.session.query(db.func.sum(Paiement.montant_paye_cdf))\
+        .filter(Paiement.eleve_id == paiement.eleve_id, Paiement.rubrique_id == paiement.rubrique_id).scalar() or 0.0
+        
+    solde = max(0.0, paiement.rubrique.montant_cdf - total_paye_rubrique)
+    
+    auto_print = request.args.get('auto_print', 0)
+    
+    return render_template('ticket_pos.html', p=paiement, solde_restant=solde, total_paye_rubrique=total_paye_rubrique, auto_print=auto_print)
 
 @app.route('/seed')
 def seed():
