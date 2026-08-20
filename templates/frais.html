@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-md-5">
+        <div class="card card-custom p-4">
+            <h4 class="fw-bold text-primary mb-3"><i class="fa-solid fa-plus-circle me-2"></i>Ajouter une Rubrique</h4>
+            <form method="POST" action="{{ url_for('gestion_frais') }}">
+                <div class="mb-3">
+                    <label class="form-label">Nom de la rubrique <span class="text-danger">*</span></label>
+                    <input type="text" name="nom" class="form-control" placeholder="Ex: Frais d'inscription, Minerval T1" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Montant ($ USD) <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" name="montant" class="form-control" placeholder="Ex: 50.00" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-control" rows="2" placeholder="Informations complémentaires..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-success w-100"><i class="fa-solid fa-save me-1"></i> Enregistrer la rubrique</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card card-custom p-4">
+            <h4 class="fw-bold text-dark mb-3"><i class="fa-solid fa-list-check me-2"></i>Rubriques des Frais Paramétrées</h4>
+            <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Rubrique</th>
+                        <th>Montant Dû ($)</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rubriques %}
+                    <tr>
+                        <td class="fw-bold">{{ r.nom }}</td>
+                        <td class="text-success fw-bold">{{ "%.2f"|format(r.montant) }} $</td>
+                        <td>{{ r.description or '-' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-3">Aucune rubrique enregistrée. N'oubliez pas de créer la rubrique "Frais d'inscription".</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
