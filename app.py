@@ -73,6 +73,35 @@ def index():
     return render_template('index.html', total_eleves=total_eleves, total_recouvre=total_recouvre, derniers_paiements=derniers_paiements)
 
 
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'ajouter_rubrique':
+            nom = request.form.get('nom')
+            montant = float(request.form.get('montant', 0))
+            section = request.form.get('section')
+            
+            nouvelle_rubrique = RubriqueFrais(nom=nom, montant=montant, section=section)
+            db.session.add(nouvelle_rubrique)
+            db.session.commit()
+            flash('Rubrique de frais ajoutée avec succès !', 'success')
+            
+        elif action == 'supprimer_rubrique':
+            rubrique_id = request.form.get('rubrique_id')
+            rubrique = RubriqueFrais.query.get(rubrique_id)
+            if rubrique:
+                db.session.delete(rubrique)
+                db.session.commit()
+                flash('Rubrique supprimée !', 'danger')
+
+        return redirect(url_for('admin'))
+
+    rubriques = RubriqueFrais.query.all()
+    return render_template('admin.html', rubriques=rubriques)
+
+
 @app.route('/eleves')
 def liste_eleves():
     nom_filter = request.args.get('nom', '').strip()
@@ -97,15 +126,6 @@ def liste_eleves():
     for e in eleves_db:
         total_paye = sum(p.montant for p in e.paiements)
         reste_a_payer = max(0.0, total_frais_fixe - total_paye)
-        
-        if statut_filter == 'paye' and total_paye == 0:
-            continue
-        if statut_filter == 'non_paye' and total_paye > 0:
-            continue
-        if statut_filter == 'en_regle' and reste_a_payer > 0:
-            continue
-        if statut_filter == 'dette' and reste_a_payer == 0:
-            continue
 
         eleves_data.append({
             'obj': e,
@@ -114,14 +134,7 @@ def liste_eleves():
             'total_du': total_frais_fixe
         })
 
-    return render_template(
-        'eleves.html', 
-        eleves_data=eleves_data, 
-        nom_sel=nom_filter,
-        section_sel=section_filter, 
-        classe_sel=classe_filter, 
-        statut_sel=statut_filter
-    )
+    return render_template('eleves.html', eleves_data=eleves_data, nom_sel=nom_filter, section_sel=section_filter, classe_sel=classe_filter, statut_sel=statut_filter)
 
 
 @app.route('/inscription', methods=['GET', 'POST'])
@@ -146,7 +159,6 @@ def inscription():
             telephone_principal=request.form.get('telephone_principal'),
             telephone_secondaire=request.form.get('telephone_secondaire')
         )
-        
         db.session.add(nouvel_eleve)
         db.session.commit()
         flash('Élève inscrit avec succès !', 'success')
@@ -176,7 +188,6 @@ def paiement():
         )
         db.session.add(nouveau_p)
         db.session.commit()
-        
         flash('Paiement enregistré avec succès !', 'success')
         return redirect(url_for('imprimer_recu', type_recu='paiement', id_recu=nouveau_p.id))
 
