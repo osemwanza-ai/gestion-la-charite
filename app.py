@@ -6,7 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'charite_secret_key_2026'
 
-# Configuration de la base de données (SQLite en local ou PostgreSQL)
+# Configuration de la base de données SQLite
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'charite.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -77,29 +77,43 @@ class Paiement(db.Model):
     date_paiement = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-# Création initiale des tables dans le contexte de l'application
+# Création initiale des tables
 with app.app_context():
     db.create_all()
 
 
 # ==========================================
-# ROUTES & LOGIQUE DE L'APPLICATION
+# ROUTES DE L'APPLICATION
 # ==========================================
 
+# 1. PAGE D'ACCUEIL / TABLEAU DE BORD
 @app.route('/')
 def index():
-    return redirect(url_for('liste_eleves'))
+    total_eleves = Eleve.query.count()
+    total_maternelle = Eleve.query.filter_by(section='Maternelle').count()
+    total_primaire = Eleve.query.filter_by(section='Primaire').count()
+    total_secondaire = Eleve.query.filter_by(section='Secondaire').count()
+    total_humanites = Eleve.query.filter_by(section='Humanités').count()
+    
+    derniers_inscrits = Eleve.query.order_by(Eleve.id.desc()).limit(5).all()
+
+    return render_template(
+        'index.html',
+        total_eleves=total_eleves,
+        total_maternelle=total_maternelle,
+        total_primaire=total_primaire,
+        total_secondaire=total_secondaire,
+        total_humanités=total_humanites,
+        derniers_inscrits=derniers_inscrits
+    )
 
 
+# 2. PAGE D'INSCRIPTION D'UN ÉLÈVE
 @app.route('/inscription', methods=['GET', 'POST'])
 def inscription():
     frais_inscription = RubriqueFrais.query.filter(RubriqueFrais.nom.ilike("%inscription%")).first()
 
     if request.method == 'POST':
-        if not frais_inscription:
-            flash("Erreur : La rubrique 'Frais d'inscription' n'est pas encore créée dans les paramètres de gestion.", "danger")
-            return redirect(url_for('inscription'))
-
         annee = datetime.now().year
         count = Eleve.query.count() + 1
         matricule = f"{annee}-CSC-{count:03d}"
@@ -133,22 +147,24 @@ def inscription():
         db.session.add(nouvel_eleve)
         db.session.commit()
 
-        # Enregistrement automatique du paiement de l'inscription
-        p_inscr = Paiement(
-            eleve_id=nouvel_eleve.id,
-            rubrique_id=frais_inscription.id,
-            montant=frais_inscription.montant,
-            date_paiement=datetime.now()
-        )
-        db.session.add(p_inscr)
-        db.session.commit()
+        # Enregistrement du paiement d'inscription si la rubrique existe
+        if frais_inscription:
+            p_inscr = Paiement(
+                eleve_id=nouvel_eleve.id,
+                rubrique_id=frais_inscription.id,
+                montant=frais_inscription.montant,
+                date_paiement=datetime.now()
+            )
+            db.session.add(p_inscr)
+            db.session.commit()
 
-        flash(f"L'élève {nouvel_eleve.nom_complet} a été inscrit avec succès. Matricule attribué : {matricule}", "success")
+        flash(f"L'élève {nouvel_eleve.nom_complet} a été inscrit avec succès. Matricule : {matricule}", "success")
         return redirect(url_for('liste_eleves'))
 
     return render_template('inscription.html', frais_inscription=frais_inscription)
 
 
+# 3. RÉPERTOIRE GÉNÉRAL DES ÉLÈVES
 @app.route('/eleves')
 def liste_eleves():
     nom_filter = request.args.get('nom', '').strip()
@@ -201,6 +217,24 @@ def liste_eleves():
         section_sel=section_filter,
         classe_sel=classe_filter
     )
+
+
+# 4. GESTION DES FRAIS & CONFIGURATION
+@app.route('/frais', methods=['GET', 'POST'])
+def gestion_frais():
+    if request.method == 'POST':
+        nom = request.form.get('nom')
+        montant = float(request.form.get('montant', 0))
+        description = request.form.get('description')
+
+        nouvelle_rubrique = RubriqueFrais(nom=nom, montant=montant, description=description)
+        db.session.add(nouvelle_rubrique)
+        db.session.commit()
+        flash("Nouvelle rubrique de frais ajoutée avec succès !", "success")
+        return redirect(url_for('gestion_frais'))
+
+    rubriques = RubriqueFrais.query.all()
+    return render_template('frais.html', rubriques=rubriques)
 
 
 if __name__ == '__main__':
