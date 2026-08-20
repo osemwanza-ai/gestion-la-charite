@@ -26,6 +26,8 @@ class RubriqueFrais(db.Model):
     montant_cdf = db.Column(db.Float, nullable=False, default=0.0)
     montant = db.Column(db.Float, nullable=True, default=0.0)
     description = db.Column(db.String(255))
+    section_cible = db.Column(db.String(50), default='Toutes') # Maternelle, Primaire, Secondaire, Humanité, Toutes
+    option_cible = db.Column(db.String(100), default='Toutes')  # Option ou classe spécifique
     est_minerval = db.Column(db.Boolean, default=False)
     est_inscription = db.Column(db.Boolean, default=False)
 
@@ -87,10 +89,11 @@ def admin_frais():
         nom = request.form.get('nom')
         montant_cdf = float(request.form.get('montant_cdf', request.form.get('montant', 0)))
         description = request.form.get('description')
+        section_cible = request.form.get('section_cible', 'Toutes')
+        option_cible = request.form.get('option_cible', 'Toutes')
         est_minerval = 'est_minerval' in request.form
         est_inscription = 'est_inscription' in request.form
         
-        # Si la nouvelle rubrique devient le frais d'inscription par défaut, décochez les anciennes
         if est_inscription:
             RubriqueFrais.query.filter_by(est_inscription=True).update({'est_inscription': False})
 
@@ -99,6 +102,8 @@ def admin_frais():
             montant_cdf=montant_cdf,
             montant=montant_cdf,
             description=description,
+            section_cible=section_cible,
+            option_cible=option_cible if option_cible.strip() != '' else 'Toutes',
             est_minerval=est_minerval,
             est_inscription=est_inscription
         )
@@ -113,7 +118,6 @@ def admin_frais():
 def admin():
     return admin_frais()
 
-# Route pour MODIFIER une rubrique
 @app.route('/modifier_rubrique/<int:id>', methods=['POST'])
 def modifier_rubrique(id):
     rubrique = RubriqueFrais.query.get_or_404(id)
@@ -122,6 +126,9 @@ def modifier_rubrique(id):
     rubrique.montant_cdf = montant_val
     rubrique.montant = montant_val
     rubrique.description = request.form.get('description')
+    rubrique.section_cible = request.form.get('section_cible', 'Toutes')
+    opt = request.form.get('option_cible', 'Toutes')
+    rubrique.option_cible = opt if opt.strip() != '' else 'Toutes'
     
     est_inscr = 'est_inscription' in request.form
     if est_inscr and not rubrique.est_inscription:
@@ -134,7 +141,6 @@ def modifier_rubrique(id):
     flash(f'Rubrique "{rubrique.nom}" mise à jour avec succès !', 'success')
     return redirect(url_for('admin_frais'))
 
-# Route pour SUPPRIMER une rubrique
 @app.route('/supprimer_rubrique/<int:id>', methods=['POST'])
 def supprimer_rubrique(id):
     rubrique = RubriqueFrais.query.get_or_404(id)
@@ -268,10 +274,10 @@ def seed():
     config = ConfigurationQuota()
     db.session.add(config)
     
-    r1 = RubriqueFrais(nom="Frais d'Inscription", montant_cdf=75000.0, montant=75000.0, description="Inscription nouvel élève", est_inscription=True)
-    r2 = RubriqueFrais(nom="Minerval - 1er Trimestre", montant_cdf=375000.0, montant=375000.0, description="Frais T1", est_minerval=True)
-    r3 = RubriqueFrais(nom="Minerval - 2ème Trimestre", montant_cdf=375000.0, montant=375000.0, description="Frais T2", est_minerval=True)
-    r4 = RubriqueFrais(nom="Minerval - 3ème Trimestre", montant_cdf=375000.0, montant=375000.0, description="Frais T3", est_minerval=True)
+    r1 = RubriqueFrais(nom="Frais d'Inscription", montant_cdf=75000.0, montant=75000.0, description="Inscription nouvel élève", section_cible="Toutes", option_cible="Toutes", est_inscription=True)
+    r2 = RubriqueFrais(nom="Minerval - 1er Trimestre", montant_cdf=375000.0, montant=375000.0, description="Frais T1", section_cible="Toutes", option_cible="Toutes", est_minerval=True)
+    r3 = RubriqueFrais(nom="Minerval - 2ème Trimestre", montant_cdf=375000.0, montant=375000.0, description="Frais T2", section_cible="Toutes", option_cible="Toutes", est_minerval=True)
+    r4 = RubriqueFrais(nom="Minerval - 3ème Trimestre", montant_cdf=375000.0, montant=375000.0, description="Frais T3", section_cible="Toutes", option_cible="Toutes", est_minerval=True)
     
     db.session.add_all([r1, r2, r3, r4])
     db.session.commit()
