@@ -2,50 +2,103 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Ticket POS - {{ p.num_recu }}</title>
+    <title>Facture POS #{{ p.num_recu }}</title>
     <style>
-        body { font-family: 'Courier New', Courier, monospace; width: 280px; margin: 0 auto; padding: 10px; font-size: 12px; }
+        @page {
+            size: 80mm auto;
+            margin: 0;
+        }
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            width: 78mm;
+            margin: 0 auto;
+            padding: 5px;
+            font-size: 12px;
+            color: #000;
+        }
         .text-center { text-align: center; }
-        .line { border-bottom: 1px dashed #000; margin: 8px 0; }
+        .text-right { text-align: right; }
         .bold { font-weight: bold; }
-        @media print { .no-print { display: none; } }
+        .line { border-bottom: 1px dashed #000; margin: 5px 0; }
+        .flex-between { display: flex; justify-content: space-between; }
+        .no-print { display: block; }
+        @media print {
+            .no-print { display: none !important; }
+        }
     </style>
 </head>
 <body>
-    <div class="no-print" style="margin-bottom: 15px;">
-        <button onclick="window.print()" style="width: 100%; padding: 8px; background: #28a745; color: #fff; border: none; cursor: pointer;">
-            Imprimer sur POS
-        </button>
+
+    <div class="no-print" style="margin-bottom: 10px; text-align: center;">
+        <button onclick="window.print()" style="padding: 8px 15px; font-weight: bold; cursor: pointer;">Imprimer le Reçu</button>
+        <button onclick="window.close()" style="padding: 8px 15px; margin-left: 10px;">Fermer</button>
     </div>
 
     <div class="text-center">
-        <h3 style="margin: 0;">CS LA CHARITÉ</h3>
-        <p style="margin: 2px 0;">Kinshasa, RDC</p>
-        <p class="bold" style="margin: 5px 0;">REÇU D'ENCAISSEMENT</p>
-        <small>{{ p.num_recu }}</small>
+        <span class="bold" style="font-size: 14px;">COMPLEXE SCOLAIRE</span><br>
+        <span class="bold" style="font-size: 16px;">LA CHARITÉ</span><br>
+        <small>Kinshasa, DRC</small>
     </div>
 
     <div class="line"></div>
 
-    <div><strong>Date:</strong> {{ p.date_paiement.strftime('%d/%m/%Y %H:%M') }}</div>
-    <div><strong>Matricule:</strong> {{ p.eleve.matricule }}</div>
-    <div><strong>Élève:</strong> {{ p.eleve.nom_complet }}</div>
-    <div><strong>Classe:</strong> {{ p.eleve.classe }}</div>
-
-    <div class="line"></div>
-
-    <div><strong>Motif:</strong> {{ p.rubrique.nom }}</div>
-    <div><strong>Mode:</strong> {{ p.mode_paiement }}</div>
-    <div style="font-size: 14px; margin-top: 5px;">
-        <strong>MONTANT PAYÉ:</strong> <br>
-        <span class="bold">{{ "{:,.0f}".format(p.montant_paye_cdf) }} CDF</span>
+    <div class="text-center bold">
+        REÇU DE PAIEMENT<br>
+        N° : {{ p.num_recu }}
     </div>
 
     <div class="line"></div>
 
-    <div class="text-center">
-        <p style="margin-top: 10px;">Merci pour votre confiance !</p>
-        <small>Direction de la Caisse</small>
+    <div>Date : {{ p.date_paiement.strftime('%d/%m/%Y %H:%M') }}</div>
+    <div>Code Élève : {{ p.eleve.matricule }}</div>
+    <div>Élève : <span class="bold">{{ p.eleve.nom_complet }}</span></div>
+    <div>Classe : {{ p.eleve.section }} - {{ p.eleve.classe }}</div>
+    {% if p.eleve.option %}
+        <div>Option : {{ p.eleve.option }}</div>
+    {% endif %}
+
+    <div class="line"></div>
+
+    <div class="bold">DÉTAIL DU PAIEMENT :</div>
+    <div style="margin-top: 3px;">Rubrique : {{ p.rubrique.nom }}</div>
+    <div class="flex-between">
+        <span>Montant Exigé :</span>
+        <span>{{ "{:,.0f}".format(p.rubrique.montant_cdf) }} CDF</span>
     </div>
+    <div class="flex-between bold" style="font-size: 13px; margin-top: 3px;">
+        <span>MONTANT VERSÉ :</span>
+        <span>{{ "{:,.0f}".format(p.montant_paye_cdf) }} CDF</span>
+    </div>
+    <div class="flex-between">
+        <span>Mode Paiement :</span>
+        <span>{{ p.mode_paiement }}</span>
+    </div>
+
+    <div class="line"></div>
+
+    <div class="flex-between">
+        <span>Total Payé à ce jour :</span>
+        <span>{{ "{:,.0f}".format(total_paye_rubrique) }} CDF</span>
+    </div>
+    <div class="flex-between bold">
+        <span>SOLDE RESTANT :</span>
+        <span>{{ "{:,.0f}".format(solde_restant) }} CDF</span>
+    </div>
+
+    <div class="line"></div>
+
+    <div class="text-center" style="margin-top: 10px;">
+        <small>Merci pour votre confiance !</small><br>
+        <small>*** La Direction ***</small>
+    </div>
+
+    {% if auto_print == '1' or auto_print == 1 %}
+    <script>
+        window.onload = function() {
+            window.print();
+        }
+    </script>
+    {% endif %}
+
 </body>
 </html>
