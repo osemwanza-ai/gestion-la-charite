@@ -1,83 +1,112 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="card card-custom p-4 bg-white">
-            <h2 class="fw-bold text-primary"><i class="fa-solid fa-gauge me-2"></i>Tableau de Bord - C.S. La Charité</h2>
-            <p class="text-muted mb-0">Vue d'ensemble des effectifs scolaires et activités récentes.</p>
+<div class="container my-4">
+    <!-- En-tête -->
+    <div class="p-4 mb-4 bg-light rounded-3 shadow-sm border">
+        <div class="container-fluid py-2">
+            <h1 class="display-5 fw-bold text-primary">
+                <i class="bi bi-building me-2"></i>Complexe Scolaire La Charité
+            </h1>
+            <p class="col-md-10 fs-5 text-muted">
+                Tableau de bord de gestion des élèves, des inscriptions et du suivi des paiements des frais scolaires.
+            </p>
         </div>
     </div>
-</div>
 
-<!-- Cartes d'Effectifs -->
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card card-custom p-3 border-start border-primary border-4">
-            <div class="text-muted small">Total Élèves Inscris</div>
-            <div class="fs-2 fw-bold text-primary">{{ total_eleves }}</div>
+    <!-- Cartes de statistiques -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm bg-primary text-white h-100">
+                <div class="card-body d-flex align-items-center justify-content-between p-4">
+                    <div>
+                        <h6 class="text-uppercase mb-2 text-white-50">Effectif Total Élèves</h6>
+                        <h2 class="display-6 fw-bold mb-0">{{ total_eleves }}</h2>
+                    </div>
+                    <i class="bi bi-people-fill display-4 opacity-50"></i>
+                </div>
+                <div class="card-footer bg-transparent border-0 text-end">
+                    <a href="{{ url_for('inscriptions') }}" class="text-white text-decoration-none small">
+                        Voir la liste <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card card-custom p-3 border-start border-success border-4">
-            <div class="text-muted small">Section Maternelle</div>
-            <div class="fs-2 fw-bold text-success">{{ total_maternelle }}</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card card-custom p-3 border-start border-warning border-4">
-            <div class="text-muted small">Section Primaire</div>
-            <div class="fs-2 fw-bold text-warning">{{ total_primaire }}</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card card-custom p-3 border-start border-info border-4">
-            <div class="text-muted small">Secondaire & Humanités</div>
-            <div class="fs-2 fw-bold text-info">{{ total_secondaire + total_humanités }}</div>
-        </div>
-    </div>
-</div>
 
-<!-- Raccourcis & Dernières Inscriptions -->
-<div class="row g-4">
-    <div class="col-md-8">
-        <div class="card card-custom p-3">
-            <h5 class="fw-bold mb-3"><i class="fa-solid fa-clock-rotate-left me-2"></i>Dernières Inscriptions</h5>
-            <table class="table table-hover align-middle">
-                <thead>
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm bg-success text-white h-100">
+                <div class="card-body d-flex align-items-center justify-content-between p-4">
+                    <div>
+                        <h6 class="text-uppercase mb-2 text-white-50">Rubriques De Frais</h6>
+                        <h2 class="display-6 fw-bold mb-0">{{ total_rubriques }}</h2>
+                    </div>
+                    <i class="bi bi-journal-check display-4 opacity-50"></i>
+                </div>
+                <div class="card-footer bg-transparent border-0 text-end">
+                    <a href="{{ url_for('paiements') }}" class="text-white text-decoration-none small">
+                        Gérer les paiements <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-12 col-lg-4">
+            <div class="card border-0 shadow-sm bg-dark text-white h-100">
+                <div class="card-body d-flex align-items-center justify-content-between p-4">
+                    <div>
+                        <h6 class="text-uppercase mb-2 text-white-50">Accès Rapide</h6>
+                        <div class="d-grid gap-2 mt-2">
+                            <a href="{{ url_for('inscriptions') }}" class="btn btn-outline-light btn-sm text-start">
+                                <i class="bi bi-person-plus me-1"></i> Nouvelle Inscription
+                            </a>
+                            <a href="{{ url_for('paiements') }}" class="btn btn-outline-light btn-sm text-start">
+                                <i class="bi bi-cash-stack me-1"></i> Nouveau Versement
+                            </a>
+                        </div>
+                    </div>
+                    <i class="bi bi-lightning-charge-fill display-4 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau des derniers inscrits -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-secondary"><i class="bi bi-clock-history me-2"></i>Dernières Inscriptions</h5>
+            <a href="{{ url_for('inscriptions') }}" class="btn btn-sm btn-outline-primary">Voir tous les élèves</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
                     <tr>
                         <th>Matricule</th>
                         <th>Nom Complet</th>
-                        <th>Classe</th>
+                        <th>Sexe</th>
                         <th>Section</th>
+                        <th>Classe</th>
+                        <th>Date d'Inscription</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for eleve in derniers_inscrits %}
+                    {% for eleve in derniers_eleves %}
                     <tr>
                         <td><span class="badge bg-secondary">{{ eleve.matricule }}</span></td>
-                        <td class="fw-bold">{{ eleve.nom_complet }}</td>
-                        <td>{{ eleve.classe }}</td>
+                        <td><strong>{{ eleve.nom_complet }}</strong></td>
+                        <td>{{ eleve.sexe }}</td>
                         <td>{{ eleve.section }}</td>
+                        <td>{{ eleve.classe }}</td>
+                        <td>{{ eleve.date_inscription.strftime('%d/%m/%Y') if eleve.date_inscription else 'N/A' }}</td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="4" class="text-center text-muted py-3">Aucune inscription récente.</td>
+                        <td colspan="6" class="text-center py-4 text-muted">
+                            Aucun élève enregistré. Allez dans <a href="{{ url_for('inscriptions') }}">Inscriptions</a> ou exécutez la réinitialisation.
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card card-custom p-3">
-            <h5 class="fw-bold mb-3"><i class="fa-solid fa-bolt me-2"></i>Actions Rapides</h5>
-            <div class="d-grid gap-2">
-                <a href="{{ url_for('inscription') }}" class="btn btn-primary py-2"><i class="fa-solid fa-user-plus me-2"></i>Inscrire un Élève</a>
-                <a href="{{ url_for('liste_eleves') }}" class="btn btn-outline-secondary py-2"><i class="fa-solid fa-list me-2"></i>Consulter le Répertoire</a>
-                <a href="{{ url_for('gestion_frais') }}" class="btn btn-outline-info py-2"><i class="fa-solid fa-coins me-2"></i>Configurer les Tarifs</a>
-            </div>
         </div>
     </div>
 </div>
