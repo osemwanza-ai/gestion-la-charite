@@ -4,27 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tableau de bord - CS La Charité</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background-color: #f4f6f9; font-family: system-ui, -apple-system, sans-serif; }
-        .card-custom { border: none; border-radius: 12px; }
+        .card-custom { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
         .stat-card { border-radius: 12px; padding: 20px; color: white; }
     </style>
 </head>
 <body>
 
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
+    <div class="row align-items-center mb-4">
+        <div class="col-md-7">
             <h2 class="fw-bold text-primary m-0">Complexe Scolaire La Charité</h2>
             <p class="text-muted small m-0">Système de Gestion Scolaire & Financière</p>
         </div>
-        <div>
-            <a href="{{ url_for('inscription') }}" class="btn btn-success btn-sm fw-bold me-2">
+        <div class="col-md-5 text-md-end mt-3 mt-md-0">
+            <a href="{{ url_for('inscription') }}" class="btn btn-success fw-bold me-2">
                 <i class="fa-solid fa-user-plus me-1"></i> Nouvel Élève
             </a>
-            <a href="{{ url_for('paiement') }}" class="btn btn-primary btn-sm fw-bold">
+            <a href="{{ url_for('paiement') }}" class="btn btn-primary fw-bold">
                 <i class="fa-solid fa-cash-register me-1"></i> Nouveau Paiement
             </a>
         </div>
@@ -33,7 +33,7 @@
     <!-- Statistiques -->
     <div class="row g-3 mb-4">
         <div class="col-md-6">
-            <div class="stat-card bg-primary shadow-sm">
+            <div class="stat-card bg-primary">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <small class="text-white-50 text-uppercase fw-bold">Total Élèves Inscrits</small>
@@ -44,7 +44,7 @@
             </div>
         </div>
         <div class="col-md-6">
-            <div class="stat-card bg-success shadow-sm">
+            <div class="stat-card bg-success">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <small class="text-white-50 text-uppercase fw-bold">Total Recouvré</small>
@@ -56,10 +56,10 @@
         </div>
     </div>
 
-    <!-- Navigation & Derniers paiements -->
+    <!-- Menu & Activités -->
     <div class="row g-4">
         <div class="col-md-4">
-            <div class="card card-custom bg-white shadow-sm p-3">
+            <div class="card card-custom bg-white p-3">
                 <h5 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-bars me-2"></i>Menu principal</h5>
                 <div class="list-group list-group-flush">
                     <a href="{{ url_for('liste_eleves') }}" class="list-group-item list-group-item-action py-3 fw-bold text-primary">
@@ -71,12 +71,15 @@
                     <a href="{{ url_for('paiement') }}" class="list-group-item list-group-item-action py-3 fw-bold text-dark">
                         <i class="fa-solid fa-file-invoice-dollar me-2"></i> Guichet de paiement
                     </a>
+                    <a href="{{ url_for('admin') }}" class="list-group-item list-group-item-action py-3 fw-bold text-danger border-top">
+                        <i class="fa-solid fa-sliders me-2"></i> Administration & Frais
+                    </a>
                 </div>
             </div>
         </div>
 
         <div class="col-md-8">
-            <div class="card card-custom bg-white shadow-sm p-4">
+            <div class="card card-custom bg-white p-4">
                 <h5 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-clock-rotate-left me-2"></i>Derniers paiements enregistrés</h5>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
@@ -98,7 +101,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="4" class="text-center text-muted py-3">Aucun paiement récent.</td>
+                                <td colspan="4" class="text-center text-muted py-4">Aucun paiement récent.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
