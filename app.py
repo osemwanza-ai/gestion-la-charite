@@ -55,6 +55,15 @@ class Paiement(db.Model):
 
 
 # ==========================================
+# INITIALISATION DE LA BASE DE DONNÉES
+# ==========================================
+# Force la suppression de l'ancienne base obsolète et recrée les tables avec la bonne structure
+with app.app_context():
+    db.drop_all()
+    db.create_all()
+
+
+# ==========================================
 # ROUTES
 # ==========================================
 
@@ -189,6 +198,4 @@ def imprimer_recu(type_recu, id_recu):
 
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
