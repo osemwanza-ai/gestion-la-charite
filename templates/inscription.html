@@ -1,271 +1,186 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscriptions - CS La Charité</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
 
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-10">
-        <div class="card card-custom p-4 mb-5">
-            <h3 class="fw-bold text-primary mb-4">
-                <i class="fa-solid fa-user-plus me-2"></i>Formulaire d'Inscription d'un Élève
-            </h3>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">CS LA CHARITÉ</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="bi bi-speedometer2"></i> Tableau de bord</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('inscriptions') }}"><i class="bi bi-person-plus"></i> Inscriptions</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('paiements') }}"><i class="bi bi-cash-coin"></i> Paiements</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_frais') }}"><i class="bi bi-gear"></i> Admin Frais</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('comptabilite') }}"><i class="bi bi-calculator"></i> Comptabilité</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-            <form method="POST" action="{{ url_for('inscription') }}" id="formInscription">
-                
-                <!-- 1. IDENTITÉ DE L'ÉLÈVE -->
-                <h5 class="text-secondary border-bottom pb-2 mb-3"><i class="fa-solid fa-id-card me-2"></i>1. Identité de l'Élève</h5>
-                <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label">Nom Complet (Nom, Postnom, Prénom) <span class="text-danger">*</span></label>
-                        <input type="text" name="nom_complet" class="form-control" placeholder="Ex: MUKENDI KALALA David" required>
+    <div class="container pb-5">
+        
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Sexe <span class="text-danger">*</span></label>
-                        <select name="sexe" class="form-select" required>
-                            <option value="" disabled selected>Choisir...</option>
-                            <option value="M">Masculin (M)</option>
-                            <option value="F">Féminin (F)</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Nationalité</label>
-                        <input type="text" name="nationalite" class="form-control" value="Congolaise">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Date de Naissance <span class="text-danger">*</span></label>
-                        <input type="date" name="date_naissance" class="form-control" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Lieu de Naissance <span class="text-danger">*</span></label>
-                        <input type="text" name="lieu_naissance" class="form-control" placeholder="Ex: Kinshasa" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Adresse Domicilaire <span class="text-danger">*</span></label>
-                        <input type="text" name="adresse" class="form-control" placeholder="Ex: N° 12, Av. Kasavubu, Q/..." required>
-                    </div>
-                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-                <!-- 2. AFFECTATION SCOLAIRE (SÉLECTEURS DYNAMIQUES) -->
-                <h5 class="text-secondary border-bottom pb-2 mb-3"><i class="fa-solid fa-graduation-cap me-2"></i>2. Affectation Scolaire</h5>
-                <div class="row g-3 mb-4">
-                    <div class="col-md-4">
-                        <label class="form-label">Section <span class="text-danger">*</span></label>
-                        <select name="section" id="selectSection" class="form-select" required onchange="adapterClassesEtOptions()">
-                            <option value="" disabled selected>Sélectionner la section...</option>
-                            <option value="Maternelle">Maternelle</option>
-                            <option value="Primaire">Primaire</option>
-                            <option value="EB">Éducation de Base (7e/8e)</option>
-                            <option value="Humanités">Humanités (Secondaire)</option>
-                        </select>
+        <div class="row g-4">
+            
+            <!-- Formulaire d'inscription -->
+            <div class="col-lg-5">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="card-title mb-0 fw-bold text-primary"><i class="bi bi-person-plus-fill me-2"></i>Nouvel Élève</h5>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Classe <span class="text-danger">*</span></label>
-                        <select name="classe" id="selectClasse" class="form-select" required disabled>
-                            <option value="" disabled selected>Choisissez d'abord une section</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4" id="blocOption" style="display: none;">
-                        <label class="form-label">Option / Filière <span class="text-danger">*</span></label>
-                        <select name="option" id="selectOption" class="form-select">
-                            <option value="" disabled selected>Sélectionner l'option...</option>
-                            <option value="Scientifique">Scientifique</option>
-                            <option value="Littéraire">Littéraire / Pédagogie</option>
-                            <option value="Commerciale & Gestion">Commerciale & Gestion</option>
-                            <option value="Technique / Électricité">Technique / Électricité</option>
-                            <option value="Coupe et Couture">Coupe et Couture</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- 3. SANTÉ & PARCOURS ANTÉRIEUR -->
-                <h5 class="text-secondary border-bottom pb-2 mb-3"><i class="fa-solid fa-notes-medical me-2"></i>3. Santé & Parcours Antérieur</h5>
-                <div class="row g-3 mb-4">
-                    <div class="col-md-3">
-                        <label class="form-label">Groupe Sanguin</label>
-                        <select name="groupe_sanguin" class="form-select">
-                            <option value="">Inconnu</option>
-                            <option value="A+">A+</option>
-                            <option value="A-">A-</option>
-                            <option value="B+">B+</option>
-                            <option value="B-">B-</option>
-                            <option value="AB+">AB+</option>
-                            <option value="AB-">AB-</option>
-                            <option value="O+">O+</option>
-                            <option value="O-">O-</option>
-                        </select>
-                    </div>
-                    <div class="col-md-9">
-                        <label class="form-label">Allergies / Particularités de Santé</label>
-                        <input type="text" name="allergies_sante" class="form-control" placeholder="RAS ou préciser les allergies/maladies récurrentes">
-                    </div>
-                    <div class="col-md-8">
-                        <label class="form-label">École de Provenance</label>
-                        <input type="text" name="ecole_provenance" class="form-control" placeholder="Nom de l'ancienne école (si applicable)">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Pourcentage Obtenu (%)</label>
-                        <input type="text" name="pourcentage_obtenu" class="form-control" placeholder="Ex: 65%">
-                    </div>
-                </div>
-
-                <!-- 4. PARENTS ET TUTEURS -->
-                <h5 class="text-secondary border-bottom pb-2 mb-3"><i class="fa-solid fa-users me-2"></i>4. Renseignements des Parents / Tuteurs</h5>
-                <div class="row g-3 mb-4">
-                    <div class="col-md-4">
-                        <label class="form-label">Nom du Père</label>
-                        <input type="text" name="nom_pere" class="form-control" placeholder="Nom complet">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Profession du Père</label>
-                        <input type="text" name="prof_pere" class="form-control">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Téléphone du Père</label>
-                        <input type="tel" name="tel_pere" class="form-control" placeholder="+243...">
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Nom de la Mère</label>
-                        <input type="text" name="nom_mere" class="form-control" placeholder="Nom complet">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Profession de la Mère</label>
-                        <input type="text" name="prof_mere" class="form-control">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Téléphone de la Mère</label>
-                        <input type="tel" name="tel_mere" class="form-control" placeholder="+243...">
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Nom du Tuteur (si différent)</label>
-                        <input type="text" name="nom_tuteur" class="form-control">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Téléphone du Tuteur</label>
-                        <input type="tel" name="tel_tuteur" class="form-control" placeholder="+243...">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Adresse Électronique (Email)</label>
-                        <input type="email" name="email_responsable" class="form-control" placeholder="Ex: exemple@gmail.com">
-                    </div>
-                </div>
-
-                <!-- VÉRIFICATION DE LA CONFIGURATION DES FRAIS D'INSCRIPTION -->
-                {% if frais_inscription %}
-                    <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
-                        <i class="fa-solid fa-circle-check fa-2x me-3"></i>
-                        <div>
-                            <strong>Frais d'inscription configurés :</strong> L'inscription générera automatiquement un paiement obligatoire de <strong>{{ "%.2f"|format(frais_inscription.montant) }} $</strong> au nom de l'élève.
-                        </div>
-                    </div>
-
-                    <!-- BOUTON ACTIF -->
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary btn-lg fw-bold">
-                            <i class="fa-solid fa-check-circle me-2"></i>Valider et Enregistrer l'Élève
-                        </button>
-                    </div>
-                {% else %}
-                    <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
-                        <i class="fa-solid fa-triangle-exclamation fa-2x me-3"></i>
-                        <div>
-                            <strong>Action requise :</strong> Les frais d'inscription n'ont pas encore été définis dans la tarification. 
-                            Vous devez d'abord ajouter la rubrique <strong>"Frais d'inscription"</strong> dans la gestion des tarifs avant de pouvoir inscrire un élève.
-                            <div class="mt-2">
-                                <a href="{{ url_for('gestion_frais') }}" class="btn btn-outline-danger btn-sm fw-bold">
-                                    <i class="fa-solid fa-coins me-1"></i> Configurer la tarification maintenant
-                                </a>
+                    <div class="card-body">
+                        <form action="{{ url_for('inscriptions') }}" method="POST">
+                            
+                            <!-- Identité -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Nom complet</label>
+                                <input type="text" name="nom_complet" class="form-control" required placeholder="Nom, Postnom, Prénom">
                             </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label fw-semibold">Sexe</label>
+                                    <select name="sexe" class="form-select" required>
+                                        <option value="M">Masculin (M)</option>
+                                        <option value="F">Féminin (F)</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-semibold">Date Naissance</label>
+                                    <input type="date" name="date_naissance" class="form-control">
+                                </div>
+                            </div>
+
+                            <!-- Affectation Scolaire -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-4">
+                                    <label class="form-label fw-semibold">Section</label>
+                                    <select name="section" class="form-select" required>
+                                        <option value="Maternelle">Maternelle</option>
+                                        <option value="Primaire">Primaire</option>
+                                        <option value="Secondaire">Secondaire</option>
+                                    </select>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label fw-semibold">Classe</label>
+                                    <input type="text" name="classe" class="form-control" placeholder="ex: 1ère" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label fw-semibold">Option</label>
+                                    <input type="text" name="option" class="form-control" placeholder="ex: Math-Info">
+                                </div>
+                            </div>
+
+                            <!-- Parents & Contacts -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Nom du Père / Téléphone</label>
+                                <div class="input-group mb-2">
+                                    <input type="text" name="nom_pere" class="form-control" placeholder="Nom du père">
+                                    <input type="text" name="tel_pere" class="form-control" placeholder="Tél père">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Nom de la Mère / Téléphone</label>
+                                <div class="input-group mb-2">
+                                    <input type="text" name="nom_mere" class="form-control" placeholder="Nom de la mère">
+                                    <input type="text" name="tel_mere" class="form-control" placeholder="Tél mère">
+                                </div>
+                            </div>
+
+                            <!-- Frais auto -->
+                            {% set val_rubrique = rubrique_inscr if rubrique_inscr is defined else rubrique %}
+                            {% if val_rubrique %}
+                                <div class="alert alert-info py-2 mb-3 small">
+                                    <i class="bi bi-info-circle me-1"></i> Frais d'inscription inclus : 
+                                    <strong>
+                                        {% if val_rubrique.montant_cdf is defined and val_rubrique.montant_cdf %}
+                                            {{ "{:,.0f}".format(val_rubrique.montant_cdf) }} CDF
+                                        {% else %}
+                                            {{ "{:,.0f}".format(val_rubrique.montant or 0) }} CDF
+                                        {% endif %}
+                                    </strong>
+                                </div>
+                            {% endif %}
+
+                            <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
+                                <i class="bi bi-check-circle me-1"></i> Inscrire l'élève
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liste des inscrits -->
+            <div class="col-lg-7">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="card-title mb-0 fw-bold text-primary"><i class="bi bi-people me-2"></i>Élèves Inscrits</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Matricule</th>
+                                        <th>Nom Complet</th>
+                                        <th>Sexe</th>
+                                        <th>Classe / Option</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if eleves %}
+                                        {% for e in eleves %}
+                                            <tr>
+                                                <td class="fw-bold text-secondary">{{ e.matricule }}</td>
+                                                <td class="fw-bold">{{ e.nom_complet }}</td>
+                                                <td>{{ e.sexe }}</td>
+                                                <td>
+                                                    <span class="badge bg-light text-dark border">
+                                                        {{ e.classe }} {{ e.section }} {{ e.option or '' }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted">
+                                                Aucun élève inscrit pour le moment.
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- BOUTON DÉSACTIVÉ -->
-                    <div class="d-grid gap-2">
-                        <button type="button" class="btn btn-secondary btn-lg fw-bold" disabled>
-                            <i class="fa-solid fa-lock me-2"></i>Inscription bloquée (Frais non définis)
-                        </button>
-                    </div>
-                {% endif %}
-
-            </form>
         </div>
     </div>
-</div>
-{% endblock %}
 
-{% block scripts %}
-<script>
-    function adapterClassesEtOptions() {
-        const selectSection = document.getElementById('selectSection');
-        const selectClasse = document.getElementById('selectClasse');
-        const blocOption = document.getElementById('blocOption');
-        const selectOption = document.getElementById('selectOption');
-
-        const section = selectSection.value;
-
-        // Réinitialiser le menu des classes
-        selectClasse.innerHTML = '';
-        selectClasse.disabled = false;
-
-        let optionsClasses = [];
-
-        if (section === 'Maternelle') {
-            optionsClasses = [
-                { val: '1ère Maternelle', text: '1ère Maternelle (Petite Section)' },
-                { val: '2ème Maternelle', text: '2ème Maternelle (Moyenne Section)' },
-                { val: '3ème Maternelle', text: '3ème Maternelle (Grande Section)' }
-            ];
-            blocOption.style.display = 'none';
-            selectOption.required = false;
-            selectOption.value = '';
-
-        } else if (section === 'Primaire') {
-            optionsClasses = [
-                { val: '1ère Primaire', text: '1ère Primaire' },
-                { val: '2ème Primaire', text: '2ème Primaire' },
-                { val: '3ème Primaire', text: '3ème Primaire' },
-                { val: '4ème Primaire', text: '4ème Primaire' },
-                { val: '5ème Primaire', text: '5ème Primaire' },
-                { val: '6ème Primaire', text: '6ème Primaire' }
-            ];
-            blocOption.style.display = 'none';
-            selectOption.required = false;
-            selectOption.value = '';
-
-        } else if (section === 'EB') { // Éducation de Base
-            optionsClasses = [
-                { val: '7ème EB', text: '7ème Année (Éducation de Base)' },
-                { val: '8ème EB', text: '8ème Année (Éducation de Base)' }
-            ];
-            blocOption.style.display = 'none';
-            selectOption.required = false;
-            selectOption.value = '';
-
-        } else if (section === 'Humanités') {
-            optionsClasses = [
-                { val: '1ère Humanités', text: '1ère Humanités (3ème Secondaire)' },
-                { val: '2ème Humanités', text: '2ème Humanités (4ème Secondaire)' },
-                { val: '3ème Humanités', text: '3ème Humanités (5ème Secondaire)' },
-                { val: '4ème Humanités', text: '4ème Humanités (6ème Secondaire)' }
-            ];
-            blocOption.style.display = 'block';
-            selectOption.required = true;
-        }
-
-        // Option par défaut
-        const defaultOpt = document.createElement('option');
-        defaultOpt.value = '';
-        defaultOpt.textContent = 'Sélectionner la classe...';
-        defaultOpt.disabled = true;
-        defaultOpt.selected = true;
-        selectClasse.appendChild(defaultOpt);
-
-        // Remplir les classes autorisées
-        optionsClasses.forEach(item => {
-            const opt = document.createElement('option');
-            opt.value = item.val;
-            opt.textContent = item.text;
-            selectClasse.appendChild(opt);
-        });
-    }
-</script>
-{% endblock %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
