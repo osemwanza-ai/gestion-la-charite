@@ -10,7 +10,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# ==================== MODÈLES DE BASE DE DONNÉES ====================
+# ==================== MODÈLES ====================
 
 class ConfigurationQuota(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -23,7 +23,8 @@ class ConfigurationQuota(db.Model):
 class RubriqueFrais(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nom = db.Column(db.String(100), nullable=False)
-    montant_cdf = db.Column(db.Float, nullable=False)
+    montant_cdf = db.Column(db.Float, nullable=False, default=0.0)
+    montant = db.Column(db.Float, nullable=True, default=0.0) # Sécurité retro-compatibilité
     description = db.Column(db.String(255))
     est_minerval = db.Column(db.Boolean, default=False)
     est_inscription = db.Column(db.Boolean, default=False)
@@ -37,26 +38,19 @@ class Eleve(db.Model):
     lieu_naissance = db.Column(db.String(100))
     nationalite = db.Column(db.String(50), default='Congolaise')
     adresse = db.Column(db.String(200))
-    
-    # Santé & Provenance
     groupe_sanguin = db.Column(db.String(10))
     allergies_sante = db.Column(db.String(255))
     ecole_provenance = db.Column(db.String(150))
     pourcentage_obtenu = db.Column(db.String(10))
-    
-    # Parents
     nom_pere = db.Column(db.String(100))
     prof_pere = db.Column(db.String(100))
     tel_pere = db.Column(db.String(20))
     nom_mere = db.Column(db.String(100))
     prof_mere = db.Column(db.String(100))
     tel_mere = db.Column(db.String(20))
-    
-    # Affectation
     section = db.Column(db.String(50), nullable=False)
     classe = db.Column(db.String(50), nullable=False)
     option = db.Column(db.String(50))
-    
     date_inscription = db.Column(db.DateTime, default=datetime.utcnow)
     paiements = db.relationship('Paiement', backref='eleve', lazy=True, cascade="all, delete-orphan")
 
@@ -65,13 +59,13 @@ class Paiement(db.Model):
     num_recu = db.Column(db.String(50), unique=True, nullable=False)
     eleve_id = db.Column(db.Integer, db.ForeignKey('eleve.id'), nullable=False)
     rubrique_id = db.Column(db.Integer, db.ForeignKey('rubrique_frais.id'), nullable=False)
-    montant_paye_cdf = db.Column(db.Float, nullable=False)
+    montant_paye_cdf = db.Column(db.Float, nullable=False, default=0.0)
+    montant_paye = db.Column(db.Float, nullable=True, default=0.0)
     mode_paiement = db.Column(db.String(50), default='Cash')
     date_paiement = db.Column(db.DateTime, default=datetime.utcnow)
-    
     rubrique = db.relationship('RubriqueFrais')
 
-# ==================== ROUTES PRINCIPALES ====================
+# ==================== ROUTES ====================
 
 @app.route('/')
 def index():
@@ -80,7 +74,6 @@ def index():
     total_encaisse = sum(p.montant_paye_cdf for p in paiements)
     derniers_paiements = Paiement.query.order_by(Paiement.date_paiement.desc()).limit(5).all()
     derniers_eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).limit(5).all()
-    
     return render_template('index.html', 
                            total_eleves=total_eleves, 
                            total_encaisse=total_encaisse,
@@ -91,36 +84,32 @@ def index():
 def admin_frais():
     if request.method == 'POST':
         nom = request.form.get('nom')
-        montant_cdf = float(request.form.get('montant_cdf', 0))
+        montant_cdf = float(request.form.get('montant_cdf', request.form.get('montant', 0)))
         description = request.form.get('description')
         est_minerval = 'est_minerval' in request.form
         est_inscription = 'est_inscription' in request.form
         
         nouvelle_rubrique = RubriqueFrais(
             nom=nom, 
-            montant_cdf=montant_cdf, 
+            montant_cdf=montant_cdf,
+            montant=montant_cdf,
             description=description,
             est_minerval=est_minerval,
             est_inscription=est_inscription
         )
         db.session.add(nouvelle_rubrique)
         db.session.commit()
-        flash('Rubrique créée avec succès !', 'success')
+        flash('Rubrique enregistrée avec succès !', 'success')
         return redirect(url_for('admin_frais'))
         
     rubriques = RubriqueFrais.query.all()
-    # Utilisation de votre fichier admin.html
-    return render_template('admin.html', rubriques=rubriques)
+    return render_template('admin.html', rubriques=rubriques, frais=rubriques)
 
 @app.route('/inscriptions', methods=['GET', 'POST'])
 def inscriptions():
     rubrique_inscr = RubriqueFrais.query.filter_by(est_inscription=True).first()
     
     if request.method == 'POST':
-        if not rubrique_inscr:
-            flash('Impossible d’inscrire un élève : la rubrique Frais d’Inscription n’existe pas encore dans l’Administration.', 'danger')
-            return redirect(url_for('inscriptions'))
-
         count = Eleve.query.count() + 1
         matricule = f"2026-CSC-{count:03d}"
         
@@ -149,31 +138,31 @@ def inscriptions():
         db.session.add(nouvel_eleve)
         db.session.commit()
         
-        # Enregistrement automatique du paiement d'inscription
-        num_recu = f"REC-INS-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        p_inscr = Paiement(
-            num_recu=num_recu,
-            eleve_id=nouvel_eleve.id,
-            rubrique_id=rubrique_inscr.id,
-            montant_paye_cdf=rubrique_inscr.montant_cdf,
-            mode_paiement='Cash'
-        )
-        db.session.add(p_inscr)
-        db.session.commit()
+        if rubrique_inscr:
+            num_recu = f"REC-INS-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            p_inscr = Paiement(
+                num_recu=num_recu,
+                eleve_id=nouvel_eleve.id,
+                rubrique_id=rubrique_inscr.id,
+                montant_paye_cdf=rubrique_inscr.montant_cdf,
+                montant_paye=rubrique_inscr.montant_cdf,
+                mode_paiement='Cash'
+            )
+            db.session.add(p_inscr)
+            db.session.commit()
 
-        flash(f'Élève {nouvel_eleve.nom_complet} inscrit avec succès avec le matricule {matricule} !', 'success')
+        flash(f'Élève {nouvel_eleve.nom_complet} inscrit !', 'success')
         return redirect(url_for('inscriptions'))
         
     eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
-    # Utilisation de votre fichier inscription.html (sans s)
-    return render_template('inscription.html', eleves=eleves, rubrique_inscr=rubrique_inscr)
+    return render_template('inscription.html', eleves=eleves, rubrique_inscr=rubrique_inscr, rubrique=rubrique_inscr)
 
 @app.route('/paiements', methods=['GET', 'POST'])
 def paiements():
     if request.method == 'POST':
         eleve_id = int(request.form.get('eleve_id'))
         rubrique_id = int(request.form.get('rubrique_id'))
-        montant_paye_cdf = float(request.form.get('montant_paye_cdf'))
+        montant = float(request.form.get('montant_paye_cdf', request.form.get('montant_paye', 0)))
         mode_paiement = request.form.get('mode_paiement', 'Cash')
         
         num_recu = f"REC-{datetime.now().strftime('%Y%m%d%H%M%S')}"
@@ -182,19 +171,17 @@ def paiements():
             num_recu=num_recu,
             eleve_id=eleve_id,
             rubrique_id=rubrique_id,
-            montant_paye_cdf=montant_paye_cdf,
+            montant_paye_cdf=montant,
+            montant_paye=montant,
             mode_paiement=mode_paiement
         )
         db.session.add(nouveau_p)
         db.session.commit()
-        
-        flash('Versement enregistré avec succès !', 'success')
         return redirect(url_for('ticket_pos', paiement_id=nouveau_p.id))
         
     eleves = Eleve.query.all()
     rubriques = RubriqueFrais.query.all()
     historique_paiements = Paiement.query.order_by(Paiement.date_paiement.desc()).all()
-    
     return render_template('paiements.html', eleves=eleves, rubriques=rubriques, paiements=historique_paiements)
 
 @app.route('/comptabilite', methods=['GET', 'POST'])
@@ -211,51 +198,41 @@ def comptabilite():
         config.pct_promoteur = float(request.form.get('pct_promoteur', 15.0))
         config.pct_materiel = float(request.form.get('pct_materiel', 10.0))
         config.pct_reserve = float(request.form.get('pct_reserve', 5.0))
-        
         db.session.commit()
-        flash('Clé de répartition des quotas mise à jour avec succès !', 'success')
         return redirect(url_for('comptabilite'))
 
     paiements_minerval = Paiement.query.join(RubriqueFrais).filter(RubriqueFrais.est_minerval == True).all()
     total_minerval = sum(p.montant_paye_cdf for p in paiements_minerval)
     
-    part_salaires = total_minerval * (config.pct_salaires / 100)
-    part_fonctionnement = total_minerval * (config.pct_fonctionnement / 100)
-    part_promoteur = total_minerval * (config.pct_promoteur / 100)
-    part_materiel = total_minerval * (config.pct_materiel / 100)
-    part_reserve = total_minerval * (config.pct_reserve / 100)
-    
     return render_template('comptabilite.html', 
                            config=config, 
                            total_minerval=total_minerval,
-                           part_salaires=part_salaires,
-                           part_fonctionnement=part_fonctionnement,
-                           part_promoteur=part_promoteur,
-                           part_materiel=part_materiel,
-                           part_reserve=part_reserve)
+                           part_salaires=total_minerval * (config.pct_salaires / 100),
+                           part_fonctionnement=total_minerval * (config.pct_fonctionnement / 100),
+                           part_promoteur=total_minerval * (config.pct_promoteur / 100),
+                           part_materiel=total_minerval * (config.pct_materiel / 100),
+                           part_reserve=total_minerval * (config.pct_reserve / 100))
 
 @app.route('/ticket_pos/<int:paiement_id>')
 def ticket_pos(paiement_id):
     paiement = Paiement.query.get_or_404(paiement_id)
-    return render_template('ticket_pos.html', p=paiement)
+    return render_template('ticket_pos.html', p=paiement, paiement=paiement)
 
 @app.route('/seed')
 def seed():
     db.drop_all()
     db.create_all()
-    
     config = ConfigurationQuota()
     db.session.add(config)
     
-    r1 = RubriqueFrais(nom="Frais d'Inscription", montant_cdf=75000.0, description="Inscription obligatoire nouvel élève", est_inscription=True)
-    r2 = RubriqueFrais(nom="Minerval - 1er Trimestre", montant_cdf=375000.0, description="Frais d'études T1", est_minerval=True)
-    r3 = RubriqueFrais(nom="Minerval - 2ème Trimestre", montant_cdf=375000.0, description="Frais d'études T2", est_minerval=True)
-    r4 = RubriqueFrais(nom="Minerval - 3ème Trimestre", montant_cdf=375000.0, description="Frais d'études T3", est_minerval=True)
+    r1 = RubriqueFrais(nom="Frais d'Inscription", montant_cdf=75000.0, montant=75000.0, description="Inscription nouvel élève", est_inscription=True)
+    r2 = RubriqueFrais(nom="Minerval - 1er Trimestre", montant_cdf=375000.0, montant=375000.0, description="Frais T1", est_minerval=True)
+    r3 = RubriqueFrais(nom="Minerval - 2ème Trimestre", montant_cdf=375000.0, montant=375000.0, description="Frais T2", est_minerval=True)
+    r4 = RubriqueFrais(nom="Minerval - 3ème Trimestre", montant_cdf=375000.0, montant=375000.0, description="Frais T3", est_minerval=True)
     
     db.session.add_all([r1, r2, r3, r4])
     db.session.commit()
-    
-    return "Base de données réinitialisée avec succès !"
+    return "Base de données réinitialisée !"
 
 if __name__ == '__main__':
     with app.app_context():
