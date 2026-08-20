@@ -247,12 +247,11 @@ def inscriptions():
     eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
     return render_template('inscription.html', eleves=eleves, rubrique_inscr=rubrique_inscr, rubrique=rubrique_inscr)
 
-# API pour la recherche d'élève et le calcul de solde par rubrique
+# API de récupération d'informations pour l'auto-complétion
 @app.route('/api/eleve_info/<int:eleve_id>')
 def api_eleve_info(eleve_id):
     eleve = Eleve.query.get_or_404(eleve_id)
     
-    # Récupération des rubriques éligibles à l'élève
     rubriques = RubriqueFrais.query.all()
     rubriques_eligibles = []
     
@@ -263,17 +262,17 @@ def api_eleve_info(eleve_id):
             opt_ok = (eleve.option in r.options_cibles.split(', '))
             
         if sec_ok and opt_ok:
-            # Calcul du montant déjà payé pour cette rubrique
-            paye = db.session.query(db.func.sum(Paiement.montant_paye_cdf))\
+            # Calcul précis du total des versements effectifs effectués par l'élève
+            paye_cumule = db.session.query(db.func.sum(Paiement.montant_paye_cdf))\
                 .filter(Paiement.eleve_id == eleve.id, Paiement.rubrique_id == r.id).scalar() or 0.0
             
-            solde = max(0.0, r.montant_cdf - paye)
+            solde = max(0.0, r.montant_cdf - paye_cumule)
             
             rubriques_eligibles.append({
                 'id': r.id,
                 'nom': r.nom,
                 'total_exige': r.montant_cdf,
-                'deja_paye': paye,
+                'deja_paye': paye_cumule,
                 'solde_restant': solde
             })
             
@@ -298,18 +297,18 @@ def paiements():
         eleve = Eleve.query.get_or_404(eleve_id)
         rubrique = RubriqueFrais.query.get_or_404(rubrique_id)
         
-        # Vérification serveur du solde restant
+        # Recalcul strict du solde côté serveur
         deja_paye = db.session.query(db.func.sum(Paiement.montant_paye_cdf))\
             .filter(Paiement.eleve_id == eleve_id, Paiement.rubrique_id == rubrique_id).scalar() or 0.0
         
         solde_restant = rubrique.montant_cdf - deja_paye
         
         if montant_paye <= 0:
-            flash("Le montant payé doit être supérieur à 0.", "danger")
+            flash("Le montant versé doit être supérieur à 0 CDF.", "danger")
             return redirect(url_for('paiements'))
             
-        if montant_paye > solde_restant + 0.01: # tolérance de calcul
-            flash(f"Impossible de valider : le montant saisi ({montant_paye:,.0f} CDF) dépasse le solde restant ({solde_restant:,.0f} CDF).", "danger")
+        if montant_paye > solde_restant + 0.01:
+            flash(f"Erreur de validation : Le montant saisi ({montant_paye:,.0f} CDF) dépasse le solde restant ({solde_restant:,.0f} CDF).", "danger")
             return redirect(url_for('paiements'))
             
         num_recu = f"REC-{datetime.now().strftime('%Y%m%d%H%M%S')}"
@@ -325,7 +324,6 @@ def paiements():
         db.session.add(nouveau_p)
         db.session.commit()
         
-        # Redirection vers la facture/ticket POS pour impression immédiate
         return redirect(url_for('ticket_pos', paiement_id=nouveau_p.id, auto_print=1))
         
     eleves = Eleve.query.order_by(Eleve.nom_complet.asc()).all()
@@ -366,12 +364,10 @@ def comptabilite():
 def ticket_pos(paiement_id):
     paiement = Paiement.query.get_or_404(paiement_id)
     
-    # Calcul du total payé à ce jour pour cette rubrique
     total_paye_rubrique = db.session.query(db.func.sum(Paiement.montant_paye_cdf))\
         .filter(Paiement.eleve_id == paiement.eleve_id, Paiement.rubrique_id == paiement.rubrique_id).scalar() or 0.0
         
     solde = max(0.0, paiement.rubrique.montant_cdf - total_paye_rubrique)
-    
     auto_print = request.args.get('auto_print', 0)
     
     return render_template('ticket_pos.html', p=paiement, solde_restant=solde, total_paye_rubrique=total_paye_rubrique, auto_print=auto_print)
