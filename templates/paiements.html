@@ -44,29 +44,31 @@
 
         <div class="row g-4">
             
-            <!-- Formulaire de Guichet de Caisse -->
+            <!-- Formulaire Guichet -->
             <div class="col-lg-6">
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white py-3">
                         <h5 class="card-title mb-0 fw-bold text-primary">
-                            <i class="bi bi-receipt-cutoff me-2"></i>Guichet d'Enregistrement des Paiements
+                            <i class="bi bi-receipt-cutoff me-2"></i>Guichet de Caisse
                         </h5>
                     </div>
                     <div class="card-body">
                         <form action="{{ url_for('paiements') }}" method="POST" id="formPaiement">
                             
-                            <!-- 1. Recherche / Sélection de l'Élève -->
+                            <!-- Champ de recherche intelligente avec datalist -->
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Rechercher ou Sélectionner l'Élève *</label>
-                                <select name="eleve_id" id="eleveSelect" class="form-select form-select-lg" required onchange="chargerInfosEleve()">
-                                    <option value="">-- Choisir un élève --</option>
+                                <label class="form-label fw-bold">Saisir le Nom ou Matricule de l'Élève *</label>
+                                <input type="text" id="rechercheEleveInput" class="form-control form-control-lg" list="listeElevesData" placeholder="Tapez pour rechercher..." oninput="traiterSelectionEleve()" autocomplete="off" required>
+                                <datalist id="listeElevesData">
                                     {% for e in eleves %}
-                                        <option value="{{ e.id }}">{{ e.nom_complet }} ({{ e.matricule }}) - {{ e.section }} {{ e.classe }}</option>
+                                        <option data-id="{{ e.id }}" value="{{ e.nom_complet }} ({{ e.matricule }}) - {{ e.section }} {{ e.classe }}"></option>
                                     {% endfor %}
-                                </select>
+                                </datalist>
+                                <!-- Champ caché transmettant l'ID de l'élève au serveur -->
+                                <input type="hidden" name="eleve_id" id="eleveIdHidden" required>
                             </div>
 
-                            <!-- Fiche Info Élève sélectionné (Auto-remplie) -->
+                            <!-- Bloc Informations de l'Élève -->
                             <div id="blocEleveInfo" class="card bg-light border-0 p-3 mb-3 d-none">
                                 <div class="row text-center">
                                     <div class="col-4 border-end">
@@ -84,22 +86,22 @@
                                 </div>
                             </div>
 
-                            <!-- 2. Choix de la Rubrique éligible -->
+                            <!-- Sélection de la Rubrique -->
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Rubrique de Frais à Payer *</label>
                                 <select name="rubrique_id" id="rubriqueSelect" class="form-select" required disabled onchange="afficherApercuRubrique()">
-                                    <option value="">-- Sélectionner d'abord un élève --</option>
+                                    <option value="">-- Rechercher d'abord un élève --</option>
                                 </select>
                             </div>
 
-                            <!-- Résumé Financier de la Rubrique (Total / Déjà payé / Solde) -->
+                            <!-- Détails Financiers (Exigé / Déjà Payé / Solde) -->
                             <div id="blocRubriqueDetails" class="alert alert-warning p-3 mb-3 d-none">
                                 <div class="d-flex justify-content-between mb-1">
-                                    <span>Montant Total Exigé :</span>
+                                    <span>Total Exigé (Rubrique) :</span>
                                     <strong id="lblTotalExige">0 CDF</strong>
                                 </div>
                                 <div class="d-flex justify-content-between mb-1 text-success">
-                                    <span>Déjà Payé à ce jour :</span>
+                                    <span>Déjà Payé par cet élève :</span>
                                     <strong id="lblDejaPaye">0 CDF</strong>
                                 </div>
                                 <hr class="my-2">
@@ -109,17 +111,17 @@
                                 </div>
                             </div>
 
-                            <!-- 3. Saisie du Montant Versé -->
+                            <!-- Champ de Saisie du Montant Versé -->
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Montant Versé (CDF) *</label>
+                                <label class="form-label fw-bold">Montant Versé (Saisie Libre) *</label>
                                 <div class="input-group">
-                                    <input type="number" step="500" name="montant_paye_cdf" id="montantPayeInput" class="form-control form-control-lg fw-bold text-success" required disabled placeholder="0">
+                                    <input type="number" step="500" name="montant_paye_cdf" id="montantPayeInput" class="form-control form-control-lg fw-bold text-success" required disabled placeholder="Saisir le montant...">
                                     <span class="input-group-text fw-bold">CDF</span>
                                 </div>
                                 <div id="msgAvertissement" class="form-text text-danger d-none fw-bold mt-1"></div>
                             </div>
 
-                            <!-- 4. Mode de Paiement -->
+                            <!-- Mode de Paiement -->
                             <div class="mb-4">
                                 <label class="form-label fw-bold">Mode de Paiement</label>
                                 <select name="mode_paiement" class="form-select">
@@ -173,7 +175,7 @@
                                                     {{ "{:,.0f}".format(p.montant_paye_cdf) }} CDF
                                                 </td>
                                                 <td>
-                                                    <a href="{{ url_for('ticket_pos', paiement_id=p.id) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="Réimprimer Reçu POS">
+                                                    <a href="{{ url_for('ticket_pos', paiement_id=p.id) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="Imprimer Reçu POS">
                                                         <i class="bi bi-printer"></i>
                                                     </a>
                                                 </td>
@@ -194,41 +196,44 @@
         </div>
     </div>
 
-    <!-- Script de logique dynamique pour recherche, calculs et blocage -->
+    <!-- Script JavaScript pour l'auto-complétion et la validation en temps réel -->
     <script>
         let donnesEleveActuel = null;
 
-        function chargerInfosEleve() {
-            const eleveId = document.getElementById('eleveSelect').value;
-            const blocEleveInfo = document.getElementById('blocEleveInfo');
-            const rubriqueSelect = document.getElementById('rubriqueSelect');
-            const montantInput = document.getElementById('montantPayeInput');
-            const btnValider = document.getElementById('btnValider');
-            const blocRubriqueDetails = document.getElementById('blocRubriqueDetails');
+        function traiterSelectionEleve() {
+            const valInput = document.getElementById('rechercheEleveInput').value;
+            const options = document.querySelectorAll('#listeElevesData option');
+            let eleveId = null;
 
-            if (!eleveId) {
-                blocEleveInfo.classList.add('d-none');
-                rubriqueSelect.innerHTML = '<option value="">-- Sélectionner d\'abord un élève --</option>';
-                rubriqueSelect.disabled = true;
-                montantInput.disabled = true;
-                btnValider.disabled = true;
-                blocRubriqueDetails.classList.add('d-none');
-                return;
+            options.forEach(opt => {
+                if (opt.value === valInput) {
+                    eleveId = opt.getAttribute('data-id');
+                }
+            });
+
+            document.getElementById('eleveIdHidden').value = eleveId || '';
+
+            if (eleveId) {
+                chargerInfosEleve(eleveId);
+            } else {
+                reinitialiserFormulaire();
             }
+        }
 
+        function chargerInfosEleve(eleveId) {
             fetch('/api/eleve_info/' + eleveId)
                 .then(response => response.json())
                 .then(data => {
                     donnesEleveActuel = data;
                     
-                    // Remplissage infos élève
                     document.getElementById('infoSection').innerText = data.section;
                     document.getElementById('infoClasse').innerText = data.classe;
                     document.getElementById('infoOption').innerText = data.option;
-                    blocEleveInfo.classList.remove('d-none');
+                    document.getElementById('blocEleveInfo').classList.remove('d-none');
 
-                    // Remplissage rubriques éligibles
+                    const rubriqueSelect = document.getElementById('rubriqueSelect');
                     rubriqueSelect.innerHTML = '<option value="">-- Sélectionner la rubrique --</option>';
+                    
                     data.rubriques.forEach(r => {
                         const option = document.createElement('option');
                         option.value = r.id;
@@ -238,9 +243,6 @@
                     });
                     
                     rubriqueSelect.disabled = false;
-                    montantInput.disabled = true;
-                    btnValider.disabled = true;
-                    blocRubriqueDetails.classList.add('d-none');
                 });
         }
 
@@ -267,20 +269,19 @@
 
                 if (rubrique.solde_restant <= 0) {
                     montantInput.disabled = true;
-                    montantInput.value = 0;
+                    montantInput.value = '';
                     btnValider.disabled = true;
-                    verserAvertissement("Cette rubrique est déjà intégralement soldée pour cet élève.");
+                    verserAvertissement("Cette rubrique est entièrement soldée pour cet élève.");
                 } else {
                     montantInput.disabled = false;
-                    montantInput.max = rubrique.solde_restant;
-                    montantInput.value = rubrique.solde_restant; // Préremplir avec le solde restant
+                    montantInput.value = rubrique.solde_restant; // Proposer le solde par défaut (modifiable)
                     btnValider.disabled = false;
                     cacherAvertissement();
                 }
             }
         }
 
-        // Contrôle en temps réel du montant saisi pour empêcher le surpayement
+        // Vérification en temps réel lors de la saisie du montant
         document.getElementById('montantPayeInput').addEventListener('input', function() {
             const rubriqueId = parseInt(document.getElementById('rubriqueSelect').value);
             const valSaisie = parseFloat(this.value) || 0;
@@ -294,7 +295,7 @@
                     verserAvertissement("Le montant doit être supérieur à 0 CDF.");
                     btnValider.disabled = true;
                 } else if (valSaisie > rubrique.solde_restant) {
-                    verserAvertissement("Le montant dépasse le solde restant (" + rubrique.solde_restant.toLocaleString('fr-FR') + " CDF).");
+                    verserAvertissement("Attention : Le montant saisi dépasse le solde restant (" + rubrique.solde_restant.toLocaleString('fr-FR') + " CDF).");
                     btnValider.disabled = true;
                 } else {
                     cacherAvertissement();
@@ -312,6 +313,19 @@
         function cacherAvertissement() {
             const msg = document.getElementById('msgAvertissement');
             msg.classList.add('d-none');
+        }
+
+        function reinitialiserFormulaire() {
+            document.getElementById('blocEleveInfo').classList.add('d-none');
+            document.getElementById('blocRubriqueDetails').classList.add('d-none');
+            const rubriqueSelect = document.getElementById('rubriqueSelect');
+            rubriqueSelect.innerHTML = '<option value="">-- Rechercher d\'abord un élève --</option>';
+            rubriqueSelect.disabled = true;
+            const montantInput = document.getElementById('montantPayeInput');
+            montantInput.disabled = true;
+            montantInput.value = '';
+            document.getElementById('btnValider').disabled = true;
+            cacherAvertissement();
         }
     </script>
 
