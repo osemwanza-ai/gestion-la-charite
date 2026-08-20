@@ -59,20 +59,24 @@ class Paiement(db.Model):
     reference_bordereau = db.Column(db.String(50))
     date_paiement = db.Column(db.DateTime, default=datetime.now)
 
-# Initialisation automatique des tables sur le serveur
 with app.app_context():
     db.create_all()
 
 # ==========================================
-# ROUTES PRINCIPALES
+# ROUTES
 # ==========================================
 
 @app.route('/')
 def index():
     total_eleves = Eleve.query.count()
     total_rubriques = RubriqueFrais.query.count()
+    total_paiements = Paiement.query.count()
     derniers_eleves = Eleve.query.order_by(Eleve.id.desc()).limit(5).all()
-    return render_template('index.html', total_eleves=total_eleves, total_rubriques=total_rubriques, derniers_eleves=derniers_eleves)
+    return render_template('index.html', 
+                           total_eleves=total_eleves, 
+                           total_rubriques=total_rubriques, 
+                           total_paiements=total_paiements,
+                           derniers_eleves=derniers_eleves)
 
 @app.route('/inscriptions', methods=['GET', 'POST'])
 def inscriptions():
@@ -110,9 +114,26 @@ def inscriptions():
     eleves = Eleve.query.order_by(Eleve.id.desc()).all()
     return render_template('inscriptions.html', eleves=eleves)
 
-# ==========================================
-# MODULE PAIEMENT DE FRAIS SCOLAIRES
-# ==========================================
+@app.route('/eleve/<int:id>')
+def fiche_eleve(id):
+    eleve = Eleve.query.get_or_404(id)
+    return render_template('fiche_eleve.html', eleve=eleve)
+
+@app.route('/admin_frais', methods=['GET', 'POST'])
+def admin_frais():
+    if request.method == 'POST':
+        nom = request.form.get('nom')
+        montant = float(request.form.get('montant', 0))
+        description = request.form.get('description')
+        
+        nouvelle_rubrique = RubriqueFrais(nom=nom, montant=montant, description=description)
+        db.session.add(nouvelle_rubrique)
+        db.session.commit()
+        flash("Nouvelle rubrique de frais ajoutée avec succès !", "success")
+        return redirect(url_for('admin_frais'))
+
+    rubriques = RubriqueFrais.query.all()
+    return render_template('admin_frais.html', rubriques=rubriques)
 
 @app.route('/paiements', methods=['GET', 'POST'])
 def paiements():
@@ -143,7 +164,6 @@ def paiements():
     eleves = Eleve.query.order_by(Eleve.nom_complet).all()
     historique_paiements = Paiement.query.order_by(Paiement.id.desc()).all()
 
-    # Calcul sécurisé des soldes
     soldes = {}
     for el in eleves:
         soldes[str(el.id)] = {}
@@ -157,16 +177,11 @@ def paiements():
                 'reste': float(max(0.0, rub.montant - total_paye))
             }
 
-    # Appel explicite vers paiements.html (avec s)
     return render_template('paiements.html', 
                            eleves=eleves, 
                            rubriques=rubriques_admin, 
                            paiements=historique_paiements,
                            soldes=json.dumps(soldes))
-
-# ==========================================
-# ROUTE DE REINITIALISATION ET DONNÉES TEST
-# ==========================================
 
 @app.route('/seed')
 def seed_data():
