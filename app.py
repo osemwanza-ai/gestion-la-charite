@@ -59,7 +59,7 @@ class Paiement(db.Model):
     reference_bordereau = db.Column(db.String(50))
     date_paiement = db.Column(db.DateTime, default=datetime.now)
 
-# Création automatique des tables sur Render au démarrage
+# Initialisation automatique des tables sur le serveur
 with app.app_context():
     db.create_all()
 
@@ -157,6 +157,7 @@ def paiements():
                 'reste': float(max(0.0, rub.montant - total_paye))
             }
 
+    # Appel explicite vers paiements.html (avec s)
     return render_template('paiements.html', 
                            eleves=eleves, 
                            rubriques=rubriques_admin, 
@@ -164,7 +165,7 @@ def paiements():
                            soldes=json.dumps(soldes))
 
 # ==========================================
-# ROUTE DE REINITIALISATION ET SIMULATION (SEED)
+# ROUTE DE REINITIALISATION ET DONNÉES TEST
 # ==========================================
 
 @app.route('/seed')
@@ -197,10 +198,10 @@ def seed_data():
         db.session.add_all([p1, p2, p3])
         db.session.commit()
 
-        flash("Base de données réinitialisée et remplie sur Render !", "success")
+        flash("Base de données réinitialisée avec succès !", "success")
         return redirect(url_for('index'))
     except Exception as e:
-        return f"Erreur de réinitialisation : {str(e)}", 500
+        return f"Erreur lors de la réinitialisation : {str(e)}", 500
 
 if __name__ == '__main__':
     app.run(debug=True)
