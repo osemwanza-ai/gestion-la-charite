@@ -92,7 +92,7 @@ def index():
     total_eleves = Eleve.query.count()
     total_maternelle = Eleve.query.filter_by(section='Maternelle').count()
     total_primaire = Eleve.query.filter_by(section='Primaire').count()
-    total_secondaire = Eleve.query.filter_by(section='Secondaire').count()
+    total_secondaire = Eleve.query.filter_by(section='EB').count()
     total_humanites = Eleve.query.filter_by(section='Humanités').count()
     
     derniers_inscrits = Eleve.query.order_by(Eleve.id.desc()).limit(5).all()
@@ -111,9 +111,15 @@ def index():
 # 2. PAGE D'INSCRIPTION D'UN ÉLÈVE
 @app.route('/inscription', methods=['GET', 'POST'])
 def inscription():
+    # Recherche stricte ou partielle de la rubrique dédiée aux frais d'inscription
     frais_inscription = RubriqueFrais.query.filter(RubriqueFrais.nom.ilike("%inscription%")).first()
 
     if request.method == 'POST':
+        # BLOQUAGE DE SÉCURITÉ : Réjection du formulaire si la rubrique n'est pas définie
+        if not frais_inscription:
+            flash("ERREUR : Impossible d'inscrire un élève. La rubrique 'Frais d'inscription' doit d'abord être définie dans la Tarification des Frais.", "danger")
+            return redirect(url_for('gestion_frais'))
+
         annee = datetime.now().year
         count = Eleve.query.count() + 1
         matricule = f"{annee}-CSC-{count:03d}"
@@ -147,18 +153,17 @@ def inscription():
         db.session.add(nouvel_eleve)
         db.session.commit()
 
-        # Enregistrement du paiement d'inscription si la rubrique existe
-        if frais_inscription:
-            p_inscr = Paiement(
-                eleve_id=nouvel_eleve.id,
-                rubrique_id=frais_inscription.id,
-                montant=frais_inscription.montant,
-                date_paiement=datetime.now()
-            )
-            db.session.add(p_inscr)
-            db.session.commit()
+        # Enregistrement automatique du paiement d'inscription
+        p_inscr = Paiement(
+            eleve_id=nouvel_eleve.id,
+            rubrique_id=frais_inscription.id,
+            montant=frais_inscription.montant,
+            date_paiement=datetime.now()
+        )
+        db.session.add(p_inscr)
+        db.session.commit()
 
-        flash(f"L'élève {nouvel_eleve.nom_complet} a été inscrit avec succès. Matricule : {matricule}", "success")
+        flash(f"L'élève {nouvel_eleve.nom_complet} a été inscrit avec succès (Paiement d'inscription : {frais_inscription.montant}$ enregistré). Matricule : {matricule}", "success")
         return redirect(url_for('liste_eleves'))
 
     return render_template('inscription.html', frais_inscription=frais_inscription)
