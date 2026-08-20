@@ -4,128 +4,151 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administration des Frais - CS La Charité</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 </head>
 <body class="bg-light">
 
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="fw-bold text-danger m-0">Administration & Paramétrage</h2>
-            <p class="text-muted small m-0">Gestion du frais d'inscription et des rubriques de frais scolaires</p>
-        </div>
-        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="fa-solid fa-arrow-left me-1"></i> Tableau de bord
-        </a>
-    </div>
-
-    <!-- Notifications -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <div class="row g-4">
-        <!-- Formulaire de saisie -->
-        <div class="col-md-5">
-            <div class="card border-0 shadow-sm p-4">
-                <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-plus-circle me-2"></i>Ajouter / Modifier une Rubrique</h5>
-                <form method="POST" action="{{ url_for('admin') }}">
-                    <input type="hidden" name="action" value="ajouter_rubrique">
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Nom de la rubrique / frais</label>
-                        <input type="text" name="nom" class="form-control" placeholder="Ex: Frais d'inscription" list="suggestions_frais" required>
-                        <datalist id="suggestions_frais">
-                            <option value="Frais d'inscription">
-                            <option value="Minerval 1er Trimestre">
-                            <option value="Minerval 2ème Trimestre">
-                            <option value="Minerval 3ème Trimestre">
-                            <option value="Frais de Réinscription">
-                        </datalist>
-                        <small class="text-muted d-block mt-1">Écrivez <strong>Frais d'inscription</strong> pour débloquer l'inscription des élèves.</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Montant (FC)</label>
-                        <input type="number" step="0.01" name="montant" class="form-control" placeholder="Ex: 25000" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Section concernée</label>
-                        <select name="section" class="form-select">
-                            <option value="Toutes">Toutes les sections</option>
-                            <option value="Maternelle">Maternelle</option>
-                            <option value="Primaire">Primaire</option>
-                            <option value="Secondaire">Secondaire</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" class="btn btn-danger w-100 fw-bold">
-                        <i class="fa-solid fa-save me-1"></i> Enregistrer le frais
-                    </button>
-                </form>
+    <!-- Barre de Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">CS LA CHARITÉ</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="bi bi-speedometer2"></i> Tableau de bord</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('inscriptions') }}"><i class="bi bi-person-plus"></i> Inscriptions</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('paiements') }}"><i class="bi bi-cash-coin"></i> Paiements</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin_frais') }}"><i class="bi bi-gear"></i> Admin Frais</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('comptabilite') }}"><i class="bi bi-calculator"></i> Comptabilité</a></li>
+                </ul>
             </div>
         </div>
+    </nav>
 
-        <!-- Tableau des rubriques existantes -->
-        <div class="col-md-7">
-            <div class="card border-0 shadow-sm p-4">
-                <h5 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-list me-2"></i>Blocs de Frais Configurés</h5>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Rubrique</th>
-                                <th>Section</th>
-                                <th>Montant</th>
-                                <th class="text-end">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for r in rubriques %}
-                            <tr>
-                                <td class="fw-bold">
-                                    {{ r.nom }}
-                                    {% if 'inscription' in r.nom.lower() %}
-                                        <span class="badge bg-success ms-1">Frais d'Inscription</span>
-                                    {% endif %}
-                                </td>
-                                <td><span class="badge bg-info text-dark">{{ r.section or 'Toutes' }}</span></td>
-                                <td class="fw-bold text-success">{{ "{:,.0f}".format(r.montant) }} FC</td>
-                                <td class="text-end">
-                                    <form method="POST" action="{{ url_for('admin') }}" class="d-inline">
-                                        <input type="hidden" name="action" value="supprimer_rubrique">
-                                        <input type="hidden" name="rubrique_id" value="{{ r.id }}">
-                                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Voulez-vous vraiment supprimer ce frais ?')">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="4" class="text-center text-muted py-4">
-                                    <i class="fa-solid fa-circle-exclamation text-warning fs-3 mb-2 d-block"></i>
-                                    Aucun frais configuré. Veuillez ajouter le <strong>Frais d'inscription</strong> ci-contre.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    <div class="container pb-5">
+        
+        <!-- Messages de notification Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row g-4">
+            
+            <!-- Formulaire d'ajout de frais -->
+            <div class="col-lg-5">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="card-title mb-0 fw-bold text-primary"><i class="bi bi-plus-circle me-2"></i>Nouvelle Rubrique de Frais</h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('admin_frais') }}" method="POST">
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Nom de la rubrique</label>
+                                <input type="text" name="nom" class="form-control" placeholder="ex: Minerval 1er Trimestre" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Montant (CDF)</label>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" name="montant_cdf" class="form-control" placeholder="0.00" required>
+                                    <span class="input-group-text">CDF</span>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Description</label>
+                                <textarea name="description" class="form-control" rows="2" placeholder="Précisions éventuelles..."></textarea>
+                            </div>
+
+                            <div class="mb-3 bg-light p-3 rounded border">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" name="est_minerval" id="est_minerval">
+                                    <label class="form-check-label fw-semibold" for="est_minerval">Est un Frais Scolaire (Minerval / Quotas)</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="est_inscription" id="est_inscription">
+                                    <label class="form-check-label fw-semibold" for="est_inscription">Est le Frais d'Inscription par défaut</label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
+                                <i class="bi bi-check-lg me-1"></i> Enregistrer la rubrique
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
+
+            <!-- Liste des rubriques configurées -->
+            <div class="col-lg-7">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="card-title mb-0 fw-bold text-primary"><i class="bi bi-list-task me-2"></i>Rubriques Configurées</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Rubrique</th>
+                                        <th>Montant</th>
+                                        <th>Type</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% set liste_rubriques = rubriques if rubriques is defined else frais %}
+                                    {% if liste_rubriques %}
+                                        {% for r in liste_rubriques %}
+                                            <tr>
+                                                <td class="fw-bold">{{ r.nom }}</td>
+                                                <td class="text-nowrap fw-bold text-success">
+                                                    {% if r.montant_cdf is defined and r.montant_cdf %}
+                                                        {{ "{:,.0f}".format(r.montant_cdf) }} CDF
+                                                    {% else %}
+                                                        {{ "{:,.0f}".format(r.montant) }} CDF
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if r.est_inscription %}
+                                                        <span class="badge bg-info text-dark">Inscription</span>
+                                                    {% elif r.est_minerval %}
+                                                        <span class="badge bg-success">Minerval</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Autre</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-muted small">{{ r.description or '-' }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted">
+                                                Aucune rubrique enregistrée pour le moment.
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
-</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
