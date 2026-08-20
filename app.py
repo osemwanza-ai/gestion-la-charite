@@ -26,14 +26,16 @@ class RubriqueFrais(db.Model):
     montant_cdf = db.Column(db.Float, nullable=False, default=0.0)
     montant = db.Column(db.Float, nullable=True, default=0.0)
     description = db.Column(db.String(255))
-    sections_cibles = db.Column(db.String(255), default='Toutes') # ex: "Maternelle, Primaire" ou "Toutes"
-    options_cibles = db.Column(db.String(255), default='Toutes')  # ex: "Math-Info, Commerciale" ou "Toutes"
+    sections_cibles = db.Column(db.String(255), default='Toutes')
+    options_cibles = db.Column(db.String(255), default='Toutes')
     est_minerval = db.Column(db.Boolean, default=False)
     est_inscription = db.Column(db.Boolean, default=False)
 
 class Eleve(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     matricule = db.Column(db.String(50), unique=True, nullable=False)
+    
+    # 1. Identité Élève
     nom_complet = db.Column(db.String(150), nullable=False)
     sexe = db.Column(db.String(10), nullable=False)
     date_naissance = db.Column(db.String(20))
@@ -42,17 +44,36 @@ class Eleve(db.Model):
     adresse = db.Column(db.String(200))
     groupe_sanguin = db.Column(db.String(10))
     allergies_sante = db.Column(db.String(255))
-    ecole_provenance = db.Column(db.String(150))
-    pourcentage_obtenu = db.Column(db.String(10))
-    nom_pere = db.Column(db.String(100))
-    prof_pere = db.Column(db.String(100))
-    tel_pere = db.Column(db.String(20))
-    nom_mere = db.Column(db.String(100))
-    prof_mere = db.Column(db.String(100))
-    tel_mere = db.Column(db.String(20))
+    
+    # 2. Scolarité demandée
     section = db.Column(db.String(50), nullable=False)
     classe = db.Column(db.String(50), nullable=False)
     option = db.Column(db.String(50))
+    
+    # 3. Parcours Précédent
+    ecole_provenance = db.Column(db.String(150))
+    pourcentage_obtenu = db.Column(db.String(10))
+    
+    # 4. Père (Tuteur 1)
+    nom_pere = db.Column(db.String(100))
+    prof_pere = db.Column(db.String(100))
+    tel_pere = db.Column(db.String(20))
+    tel_pere_wa = db.Column(db.String(20))
+    email_pere = db.Column(db.String(100))
+    
+    # 5. Mère (Tuteur 2)
+    nom_mere = db.Column(db.String(100))
+    prof_mere = db.Column(db.String(100))
+    tel_mere = db.Column(db.String(20))
+    tel_mere_wa = db.Column(db.String(20))
+    email_mere = db.Column(db.String(100))
+    
+    # 6. Urgence & Responsable
+    contact_urgence_nom = db.Column(db.String(100))
+    contact_urgence_lien = db.Column(db.String(50))
+    contact_urgence_tel = db.Column(db.String(20))
+    responsable_financier = db.Column(db.String(50))
+    
     date_inscription = db.Column(db.DateTime, default=datetime.utcnow)
     paiements = db.relationship('Paiement', backref='eleve', lazy=True, cascade="all, delete-orphan")
 
@@ -89,8 +110,6 @@ def admin_frais():
         nom = request.form.get('nom')
         montant_cdf = float(request.form.get('montant_cdf', request.form.get('montant', 0)))
         description = request.form.get('description')
-        
-        # Récupération des cases à cocher multiples
         sections_choisies = request.form.getlist('sections')
         options_choisies = request.form.getlist('options')
         
@@ -164,6 +183,15 @@ def inscriptions():
     rubrique_inscr = RubriqueFrais.query.filter_by(est_inscription=True).first()
     
     if request.method == 'POST':
+        section = request.form.get('section')
+        option = request.form.get('option')
+        
+        # Validation serveur : Obligation de l'option en Humanité
+        if section == 'Humanité' and not option:
+            flash("L'option est obligatoire pour l'inscription en Humanité.", "danger")
+            eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
+            return render_template('inscription.html', eleves=eleves, rubrique_inscr=rubrique_inscr, rubrique=rubrique_inscr)
+
         count = Eleve.query.count() + 1
         matricule = f"2026-CSC-{count:03d}"
         
@@ -177,17 +205,30 @@ def inscriptions():
             adresse=request.form.get('adresse'),
             groupe_sanguin=request.form.get('groupe_sanguin'),
             allergies_sante=request.form.get('allergies_sante'),
+            
+            section=section,
+            classe=request.form.get('classe'),
+            option=option if section == 'Humanité' else None,
+            
             ecole_provenance=request.form.get('ecole_provenance'),
             pourcentage_obtenu=request.form.get('pourcentage_obtenu'),
+            
             nom_pere=request.form.get('nom_pere'),
             prof_pere=request.form.get('prof_pere'),
             tel_pere=request.form.get('tel_pere'),
+            tel_pere_wa=request.form.get('tel_pere_wa'),
+            email_pere=request.form.get('email_pere'),
+            
             nom_mere=request.form.get('nom_mere'),
             prof_mere=request.form.get('prof_mere'),
             tel_mere=request.form.get('tel_mere'),
-            section=request.form.get('section'),
-            classe=request.form.get('classe'),
-            option=request.form.get('option')
+            tel_mere_wa=request.form.get('tel_mere_wa'),
+            email_mere=request.form.get('email_mere'),
+            
+            contact_urgence_nom=request.form.get('contact_urgence_nom'),
+            contact_urgence_lien=request.form.get('contact_urgence_lien'),
+            contact_urgence_tel=request.form.get('contact_urgence_tel'),
+            responsable_financier=request.form.get('responsable_financier')
         )
         db.session.add(nouvel_eleve)
         db.session.commit()
@@ -205,7 +246,7 @@ def inscriptions():
             db.session.add(p_inscr)
             db.session.commit()
 
-        flash(f'Élève {nouvel_eleve.nom_complet} inscrit !', 'success')
+        flash(f'Élève {nouvel_eleve.nom_complet} inscrit avec succès !', 'success')
         return redirect(url_for('inscriptions'))
         
     eleves = Eleve.query.order_by(Eleve.date_inscription.desc()).all()
