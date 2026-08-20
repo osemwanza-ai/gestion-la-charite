@@ -1,184 +1,170 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fiche d'Inscription - CS La Charité</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="bg-light">
+{% extends 'base.html' %}
 
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="fa-solid fa-arrow-left me-1"></i> Retour au tableau de bord
-        </a>
-    </div>
-
-    <!-- Message de blocage si frais non paramétré -->
-    {% if not frais_inscription %}
-    <div class="alert alert-danger shadow-sm border-0 mb-4" role="alert">
-        <div class="d-flex align-items-center">
-            <i class="fa-solid fa-triangle-exclamation fs-3 me-3"></i>
-            <div>
-                <strong>Blocage :</strong> Le frais d'inscription n'a pas encore été configuré dans l'espace Administrateur. Veuillez le paramétrer avant d'inscrire un élève.
-                <a href="{{ url_for('admin') }}" class="btn btn-sm btn-danger ms-3">
-                    <i class="fa-solid fa-gear me-1"></i> Paramétrer dans l'Admin
-                </a>
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card card-custom p-4 mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="fw-bold text-primary mb-0"><i class="fa-solid fa-user-plus me-2"></i>Nouvelle Inscription</h3>
+                {% if frais_inscription %}
+                    <span class="badge bg-success p-2 fs-6">Frais d'inscription : {{ "%.2f"|format(frais_inscription.montant) }} $</span>
+                {% else %}
+                    <span class="badge bg-danger p-2 fs-6">Frais d'inscription non configurés</span>
+                {% endif %}
             </div>
-        </div>
-    </div>
-    {% else %}
-    <div class="alert alert-success shadow-sm border-0 mb-4" role="alert">
-        <i class="fa-solid fa-circle-check me-2"></i>
-        Frais d'inscription configuré : <strong>{{ "{:,.0f}".format(frais_inscription.montant) }} FC</strong>
-    </div>
-    {% endif %}
 
-    <div class="card border-0 shadow-sm p-4">
-        <h3 class="fw-bold text-success mb-4">Fiche d'Inscription de l'Élève</h3>
-
-        <form method="POST" action="{{ url_for('inscription') }}" id="formInscription">
-            <fieldset {% if not frais_inscription %}disabled{% endif %}>
-                
-                <!-- 1. IDENTITÉ DE L'ÉLÈVE -->
-                <h5 class="fw-bold text-primary mb-3"><span class="border-start border-4 border-primary ps-2">1. Identité de l'Élève</span></h5>
+            <form method="POST" action="{{ url_for('inscription') }}">
+                <!-- Identity -->
+                <h5 class="text-secondary border-bottom pb-2 mb-3"><i class="fa-solid fa-id-card me-2"></i>Identité de l'Élève</h5>
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
-                        <label class="form-label fw-bold">Nom complet de l'élève *</label>
-                        <input type="text" name="nom_complet" class="form-control" required placeholder="Ex: Mwanza Mutombo">
+                        <label class="form-label font-weight-bold">Nom Complet <span class="text-danger">*</span></label>
+                        <input type="text" name="nom_complet" class="form-control" required placeholder="Ex: Mwanza Mutombo Gabriel">
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label fw-bold">Sexe *</label>
+                        <label class="form-label">Sexe <span class="text-danger">*</span></label>
                         <select name="sexe" class="form-select" required>
-                            <option value="">Sélectionner...</option>
+                            <option value="">Sélectionner</option>
                             <option value="M">Masculin (M)</option>
                             <option value="F">Féminin (F)</option>
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label fw-bold">Date de Naissance *</label>
-                        <input type="date" name="date_naissance" id="date_naissance" class="form-control" required onchange="verifierAge()">
-                        <small id="ageHelp" class="form-text text-muted"></small>
+                        <label class="form-label">Date de Naissance <span class="text-danger">*</span></label>
+                        <input type="date" name="date_naissance" class="form-control" required>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Lieu de Naissance *</label>
+                    <div class="col-md-4">
+                        <label class="form-label">Lieu de Naissance <span class="text-danger">*</span></label>
                         <input type="text" name="lieu_naissance" class="form-control" required placeholder="Ex: Kinshasa">
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Adresse Résidentielle *</label>
-                        <input type="text" name="adresse" class="form-control" required placeholder="Avenue, Quartier, Commune">
+                    <div class="col-md-4">
+                        <label class="form-label">Nationalité</label>
+                        <input type="text" name="nationalite" class="form-control" value="Congolaise">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Adresse Domicilaire <span class="text-danger">*</span></label>
+                        <input type="text" name="adresse" class="form-control" required placeholder="N°, Avenue, Quartier, Commune">
                     </div>
                 </div>
 
-                <!-- 2. AFFECTATION SCOLAIRE -->
-                <h5 class="fw-bold text-primary mb-3"><span class="border-start border-4 border-primary ps-2">2. Affectation Scolaire</span></h5>
+                <!-- Orientation Scolaire -->
+                <h5 class="text-secondary border-bottom pb-2 mb-3"><i class="fa-solid fa-graduation-cap me-2"></i>Affectation Scolaire</h5>
                 <div class="row g-3 mb-4">
                     <div class="col-md-4">
-                        <label class="form-label fw-bold">Section *</label>
-                        <select name="section" id="sectionSelect" class="form-select" required onchange="gererSection()">
-                            <option value="">Sélectionner...</option>
+                        <label class="form-label">Section <span class="text-danger">*</span></label>
+                        <select name="section" id="sectionSelect" class="form-select" required onchange="toggleOption()">
+                            <option value="">Sélectionner</option>
                             <option value="Maternelle">Maternelle</option>
                             <option value="Primaire">Primaire</option>
-                            <option value="Secondaire">Secondaire</option>
+                            <option value="Secondaire">Secondaire Général</option>
+                            <option value="Humanités">Humanités</option>
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-bold">Classe *</label>
-                        <input type="text" name="classe" class="form-control" placeholder="Ex: 1ère Année, 3ème" required>
+                        <label class="form-label">Classe <span class="text-danger">*</span></label>
+                        <input type="text" name="classe" class="form-control" required placeholder="Ex: 1ère, 3ème, 8ème EB">
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold" id="labelOption">Option <span id="asterisqueOption" class="text-danger d-none">*</span></label>
-                        <input type="text" name="option" id="optionInput" class="form-control" placeholder="Ex: Scientifique, Commerciale">
-                        <small id="optionHelp" class="form-text text-muted">Obligatoire uniquement pour le Secondaire.</small>
+                    <div class="col-md-4" id="optionDiv" style="display: none;">
+                        <label class="form-label">Option (Humanités)</label>
+                        <select name="option" class="form-select">
+                            <option value="">Sélectionner l'option</option>
+                            <option value="Commerciale & Gestion">Commerciale & Gestion</option>
+                            <option value="Scientifique">Scientifique</option>
+                            <option value="Littéraire">Littéraire</option>
+                            <option value="Pédagogie Générale">Pédagogie Générale</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- 3. RESPONSABLE LÉGAL -->
-                <h5 class="fw-bold text-primary mb-3"><span class="border-start border-4 border-primary ps-2">3. Responsable Légal</span></h5>
+                <!-- Santé et Origine -->
+                <h5 class="text-secondary border-bottom pb-2 mb-3"><i class="fa-solid fa-heart-pulse me-2"></i>Santé & Antécédents</h5>
                 <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Nom du Responsable / Tuteur *</label>
-                        <input type="text" name="nom_responsables" class="form-control" required placeholder="Nom du père ou de la mère">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Lien de Parenté *</label>
-                        <select name="lien_parente" class="form-select" required>
-                            <option value="">Sélectionner...</option>
-                            <option value="Père">Père</option>
-                            <option value="Mère">Mère</option>
-                            <option value="Tuteur">Tuteur / Tutrice</option>
+                    <div class="col-md-3">
+                        <label class="form-label">Groupe Sanguin</label>
+                        <select name="groupe_sanguin" class="form-select">
+                            <option value="">Inconnu</option>
+                            <option value="A+">A+</option><option value="A-">A-</option>
+                            <option value="B+">B+</option><option value="B-">B-</option>
+                            <option value="O+">O+</option><option value="O-">O-</option>
+                            <option value="AB+">AB+</option><option value="AB-">AB-</option>
                         </select>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Téléphone Principal *</label>
-                        <input type="tel" name="telephone_principal" class="form-control" required placeholder="+243 ...">
+                    <div class="col-md-3">
+                        <label class="form-label">Pourcentage Précédent (%)</label>
+                        <input type="text" name="pourcentage_obtenu" class="form-control" placeholder="Ex: 68%">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-bold">Téléphone Secondaire</label>
-                        <input type="tel" name="telephone_secondaire" class="form-control" placeholder="+243 ...">
+                        <label class="form-label">École de Provenance</label>
+                        <input type="text" name="ecole_provenance" class="form-control" placeholder="Nom de l'ancienne école">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Allergies / Particularités Médicales</label>
+                        <textarea name="allergies_sante" class="form-control" rows="2" placeholder="Mentionner toute information médicale importante..."></textarea>
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-success btn-lg w-100 fw-bold">
-                    <i class="fa-solid fa-user-plus me-2"></i> Valider l'inscription & Comptabiliser le frais
-                </button>
+                <!-- Parents & Responsables -->
+                <h5 class="text-secondary border-bottom pb-2 mb-3"><i class="fa-solid fa-users-rectangle me-2"></i>Contacts des Parents & Tuteur</h5>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label">Nom du Père</label>
+                        <input type="text" name="nom_pere" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Profession du Père</label>
+                        <input type="text" name="prof_pere" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Téléphone Père</label>
+                        <input type="tel" name="tel_pere" class="form-control" placeholder="+243 ...">
+                    </div>
 
-            </fieldset>
-        </form>
+                    <div class="col-md-4">
+                        <label class="form-label">Nom de la Mère</label>
+                        <input type="text" name="nom_mere" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Profession de la Mère</label>
+                        <input type="text" name="prof_mere" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Téléphone Mère</label>
+                        <input type="tel" name="tel_mere" class="form-control" placeholder="+243 ...">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Nom du Tuteur Legal</label>
+                        <input type="text" name="nom_tuteur" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Téléphone Tuteur</label>
+                        <input type="tel" name="tel_tuteur" class="form-control" placeholder="+243 ...">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Email Responsable</label>
+                        <input type="email" name="email_responsable" class="form-control" placeholder="exemple@mail.com">
+                    </div>
+                </div>
+
+                <div class="text-end border-top pt-3">
+                    <button type="submit" class="btn btn-success btn-lg px-5"><i class="fa-solid fa-check-circle me-2"></i> Valider l'Inscription</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-function gererSection() {
-    const section = document.getElementById('sectionSelect').value;
-    const optionInput = document.getElementById('optionInput');
-    const asterisqueOption = document.getElementById('asterisqueOption');
-    
-    if (section === 'Secondaire') {
-        optionInput.required = true;
-        asterisqueOption.classList.remove('d-none');
-        optionInput.placeholder = "Ex: Scientifique, Littéraire, Commerciale";
+function toggleOption() {
+    var section = document.getElementById("sectionSelect").value;
+    var optionDiv = document.getElementById("optionDiv");
+    if (section === "Humanités") {
+        optionDiv.style.display = "block";
     } else {
-        optionInput.required = false;
-        asterisqueOption.classList.add('d-none');
-        optionInput.value = "";
-        optionInput.placeholder = "Non applicable";
-    }
-    verifierAge();
-}
-
-function verifierAge() {
-    const dateNaiss = document.getElementById('date_naissance').value;
-    const section = document.getElementById('sectionSelect').value;
-    const ageHelp = document.getElementById('ageHelp');
-
-    if (!dateNaiss) return;
-
-    const birthDate = new Date(dateNaiss);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-    }
-
-    ageHelp.innerText = "Âge : " + age + " an(s)";
-
-    // Exemples d'avertissements selon la section choisie
-    if (section === 'Maternelle' && (age < 3 || age > 6)) {
-        ageHelp.className = "form-text text-danger fw-bold";
-        ageHelp.innerText += " - Attention: Âge inhabituel pour la Maternelle (3-5 ans recommandés).";
-    } else if (section === 'Primaire' && (age < 5 || age > 14)) {
-        ageHelp.className = "form-text text-warning fw-bold";
-        ageHelp.innerText += " - Vérifier la section pour cet âge.";
-    } else {
-        ageHelp.className = "form-text text-success fw-bold";
+        optionDiv.style.display = "none";
     }
 }
 </script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+{% endblock %}
