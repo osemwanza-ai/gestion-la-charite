@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -118,7 +119,6 @@ def paiements():
         mode = request.form.get('mode_paiement')
         ref = request.form.get('reference_bordereau')
 
-        # Génération automatique du Reçu
         count = Paiement.query.count() + 1
         num_recu = f"REC-2026-{count:04d}"
 
@@ -135,12 +135,10 @@ def paiements():
         flash(f"Paiement enregistré avec succès ! Reçu N° {num_recu}", "success")
         return redirect(url_for('paiements'))
 
-    # Seules les rubriques créées par l'admin (EXCLUANT les frais d'inscription)
     rubriques_admin = RubriqueFrais.query.filter(RubriqueFrais.nom.notilike("%inscription%")).all()
     eleves = Eleve.query.order_by(Eleve.nom_complet).all()
     historique_paiements = Paiement.query.order_by(Paiement.id.desc()).all()
 
-    # Calcul des soldes pour chaque élève et chaque rubrique
     soldes = {}
     for el in eleves:
         soldes[el.id] = {}
@@ -154,11 +152,12 @@ def paiements():
                 'reste': max(0.0, rub.montant - total_paye)
             }
 
+    # Conversion sécurisée en JSON ici
     return render_template('paiements.html', 
                            eleves=eleves, 
                            rubriques=rubriques_admin, 
                            paiements=historique_paiements,
-                           soldes=soldes)
+                           soldes=json.dumps(soldes))
 
 # ==========================================
 # ROUTE DE REMPLISSAGE RAPIDE (DONNÉES TEST)
@@ -169,7 +168,6 @@ def seed_data():
     db.drop_all()
     db.create_all()
 
-    # 1. Rubriques créées par l'Administration
     r_inscr = RubriqueFrais(nom="Frais d'inscription", montant=50.0, description="Admission obligatoire")
     r_t1 = RubriqueFrais(nom="Minerval - 1er Trimestre", montant=150.0, description="Scolarité T1")
     r_t2 = RubriqueFrais(nom="Minerval - 2ème Trimestre", montant=150.0, description="Scolarité T2")
@@ -179,7 +177,6 @@ def seed_data():
     db.session.add_all([r_inscr, r_t1, r_t2, r_tech, r_bulletin])
     db.session.commit()
 
-    # 2. Élèves de démonstration
     e1 = Eleve(matricule="2026-CSC-001", nom_complet="KABANGA MPOYI Christian", sexe="M", date_naissance="2019-04-12", lieu_naissance="Kinshasa", adresse="Av. Lukusa N° 45, Gombe", nom_pere="KABANGA Joseph", tel_pere="+243810000001", section="Maternelle", classe="3ème Maternelle")
     e2 = Eleve(matricule="2026-CSC-002", nom_complet="NDAYA KASONGO Grace", sexe="F", date_naissance="2016-08-20", lieu_naissance="Lubumbashi", adresse="Av. Kasa-Vubu N° 102, Ngiri-Ngiri", nom_pere="KASONGO Alain", tel_pere="+243810000002", section="Primaire", classe="4ème Primaire")
     e3 = Eleve(matricule="2026-CSC-003", nom_complet="MUKENDI MUTOMBO Daniel", sexe="M", date_naissance="2012-01-15", lieu_naissance="Kinshasa", adresse="Av. Université N° 88, Makala", nom_pere="MUTOMBO Pierre", tel_pere="+243810000003", section="EB", classe="8ème EB")
@@ -188,9 +185,8 @@ def seed_data():
     db.session.add_all([e1, e2, e3, e4])
     db.session.commit()
 
-    # 3. Paiements tests
     p1 = Paiement(numero_recu="REC-2026-0001", eleve_id=e1.id, rubrique_id=r_t1.id, montant=150.0, mode_paiement="Cash")
-    p2 = Paiement(numero_recu="REC-2026-0002", eleve_id=e2.id, rubrique_id=r_t1.id, montant=100.0, mode_paiement="Cash") # Acompte
+    p2 = Paiement(numero_recu="REC-2026-0002", eleve_id=e2.id, rubrique_id=r_t1.id, montant=100.0, mode_paiement="Cash")
     p3 = Paiement(numero_recu="REC-2026-0003", eleve_id=e4.id, rubrique_id=r_tech.id, montant=30.0, mode_paiement="Mobile Money")
 
     db.session.add_all([p1, p2, p3])
