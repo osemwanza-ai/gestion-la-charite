@@ -11,24 +11,33 @@
         .card-custom { border: none; border-radius: 12px; }
         .clickable-row { cursor: pointer; transition: background-color 0.2s; }
         .clickable-row:hover { background-color: #e9ecef !important; }
+        .stat-card { border-radius: 8px; padding: 12px; text-align: center; }
     </style>
 </head>
 <body>
 
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-primary m-0">Répertoire des Élèves</h2>
+        <div>
+            <h2 class="fw-bold text-primary m-0">Répertoire des Élèves</h2>
+            <p class="text-muted small m-0">Gestion du registre et de la situation financière</p>
+        </div>
         <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="fa-solid fa-arrow-left me-1"></i> Retour Tableau de Bord
+            <i class="fa-solid fa-arrow-left me-1"></i> Tableau de bord
         </a>
     </div>
 
-    <!-- Filtres -->
+    <!-- Zone de Filtres et Recherche -->
     <div class="card card-custom bg-white shadow-sm p-4 mb-4">
-        <h5 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-filter me-2"></i>Filtres & Recherche des Élèves</h5>
+        <h5 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-filter me-2"></i>Filtres de recherche</h5>
         <form method="GET" action="{{ url_for('liste_eleves') }}">
             <div class="row g-3">
-                <div class="col-md-4">
+                <!-- Champ Recherche par Nom -->
+                <div class="col-md-3">
+                    <label class="form-label text-muted small fw-bold">Nom complet de l'élève</label>
+                    <input type="text" name="nom" class="form-control" placeholder="Ex: Mulunda, Bomolo..." value="{{ nom_sel }}">
+                </div>
+                <div class="col-md-3">
                     <label class="form-label text-muted small fw-bold">Section</label>
                     <select name="section" class="form-select">
                         <option value="">Toutes les sections</option>
@@ -37,113 +46,152 @@
                         <option value="Secondaire" {% if section_sel == 'Secondaire' %}selected{% endif %}>Secondaire</option>
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label text-muted small fw-bold">Classe</label>
-                    <input type="text" name="classe" class="form-control" placeholder="ex: 1ère, 2ème Primaire..." value="{{ classe_sel }}">
+                    <input type="text" name="classe" class="form-control" placeholder="Ex: 1ère, 2ème..." value="{{ classe_sel }}">
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label text-muted small fw-bold">Paiement / Statut Frais</label>
+                <div class="col-md-3">
+                    <label class="form-label text-muted small fw-bold">Statut Financier</label>
                     <select name="statut" class="form-select">
                         <option value="">Tous les élèves</option>
-                        <option value="paye" {% if statut_sel == 'paye' %}selected{% endif %}>Élèves ayant effectué un paiement</option>
-                        <option value="non_paye" {% if statut_sel == 'non_paye' %}selected{% endif %}>Aucun paiement enregistré</option>
+                        <option value="en_regle" {% if statut_sel == 'en_regle' %}selected{% endif %}>En règle (Solde = 0 FC)</option>
+                        <option value="dette" {% if statut_sel == 'dette' %}selected{% endif %}>Ayant une dette</option>
+                        <option value="paye" {% if statut_sel == 'paye' %}selected{% endif %}>Au moins un paiement</option>
+                        <option value="non_paye" {% if statut_sel == 'non_paye' %}selected{% endif %}>Aucun paiement</option>
                     </select>
                 </div>
                 <div class="col-12 mt-3">
                     <button type="submit" class="btn btn-primary w-100 fw-bold">
-                        <i class="fa-solid fa-search me-1"></i> Appliquer les filtres de recherche
+                        <i class="fa-solid fa-search me-1"></i> Rechercher
                     </button>
                 </div>
             </div>
         </form>
     </div>
 
-    <!-- Tableau répertoire -->
+    <!-- Liste des Élèves -->
     <div class="card card-custom bg-white shadow-sm p-4">
         <h5 class="fw-bold mb-3 text-secondary">
-            Répertoire des Inscrits <span class="fs-6 fw-normal text-muted">(Cliquez sur une ligne pour voir la fiche détaillée)</span>
+            Liste des élèves inscrits 
+            <span class="fs-6 fw-normal text-muted">(Cliquez sur un élève pour voir son dossier complet)</span>
         </h5>
+        
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-dark">
                     <tr>
                         <th>Matricule</th>
-                        <th>Élève</th>
-                        <th>Section</th>
-                        <th>Classe / Option</th>
-                        <th>Responsable / Tuteur</th>
-                        <th>Téléphone</th>
+                        <th>Nom complet</th>
+                        <th>Section / Classe</th>
+                        <th>Responsable</th>
+                        <th>Total Payé</th>
+                        <th>Reste à Payer</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for e in eleves %}
+                    {% for item in eleves_data %}
+                    {% set e = item.obj %}
                     <tr class="clickable-row" data-bs-toggle="modal" data-bs-target="#modalEleve{{ e.id }}">
                         <td class="fw-bold text-primary">{{ e.matricule }}</td>
                         <td class="fw-bold">{{ e.nom_complet }}</td>
-                        <td><span class="badge bg-info text-dark">{{ e.section }}</span></td>
-                        <td>{{ e.classe }} {{ '(' ~ e.option ~ ')' if e.option else '' }}</td>
-                        <td>{{ e.nom_responsables }} {% if e.lien_parente %}({{ e.lien_parente }}){% endif %}</td>
-                        <td>{{ e.telephone_principal }}</td>
+                        <td><span class="badge bg-info text-dark">{{ e.section }}</span> {{ e.classe }}</td>
+                        <td>{{ e.nom_responsables }} ({{ e.telephone_principal }})</td>
+                        <td class="fw-bold text-success">{{ "{:,.0f}".format(item.total_paye) }} FC</td>
+                        <td class="fw-bold {% if item.reste_a_payer > 0 %}text-danger{% else %}text-muted{% endif %}">
+                            {{ "{:,.0f}".format(item.reste_a_payer) }} FC
+                        </td>
                     </tr>
 
-                    <!-- Modal Fiche Détaillée Élève -->
+                    <!-- Modal Dossier Complet Élève -->
                     <div class="modal fade" id="modalEleve{{ e.id }}" tabindex="-1" aria-hidden="true">
                         <div class="modal-dialog modal-lg modal-dialog-centered">
                             <div class="modal-content">
                                 <div class="modal-header bg-primary text-white">
-                                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-id-card me-2"></i>Fiche Élève : {{ e.nom_complet }}</h5>
+                                    <h5 class="modal-title fw-bold">
+                                        <i class="fa-solid fa-user-graduate me-2"></i>Dossier Élève : {{ e.nom_complet }}
+                                    </h5>
                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
                                 </div>
                                 <div class="modal-body">
-                                    <div class="row g-3">
+                                    <!-- Signalétique Élève -->
+                                    <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-id-card me-2"></i>Identité & Renseignements</h6>
+                                    <div class="row g-2 mb-3 bg-light p-3 rounded">
                                         <div class="col-md-6">
                                             <p class="mb-1"><strong>Matricule :</strong> {{ e.matricule }}</p>
                                             <p class="mb-1"><strong>Sexe :</strong> {{ e.sexe }}</p>
-                                            <p class="mb-1"><strong>Date / Lieu de Naissance :</strong> {{ e.date_naissance or 'N/A' }} à {{ e.lieu_naissance or 'N/A' }}</p>
-                                            <p class="mb-1"><strong>Adresse :</strong> {{ e.adresse or 'N/A' }}</p>
+                                            <p class="mb-1"><strong>Date & Lieu de Nais. :</strong> {{ e.date_naissance or '-' }} à {{ e.lieu_naissance or '-' }}</p>
+                                            <p class="mb-1"><strong>Adresse :</strong> {{ e.adresse or '-' }}</p>
                                         </div>
                                         <div class="col-md-6">
-                                            <p class="mb-1"><strong>Section :</strong> {{ e.section }}</p>
-                                            <p class="mb-1"><strong>Classe :</strong> {{ e.classe }} {{ e.option }}</p>
-                                            <p class="mb-1"><strong>Tuteur :</strong> {{ e.nom_responsables }} ({{ e.lien_parente }})</p>
-                                            <p class="mb-1"><strong>Téléphone :</strong> {{ e.telephone_principal }} / {{ e.telephone_secondaire or '-' }}</p>
+                                            <p class="mb-1"><strong>Section / Classe :</strong> {{ e.section }} - {{ e.classe }} {{ '(' ~ e.option ~ ')' if e.option else '' }}</p>
+                                            <p class="mb-1"><strong>Responsable / Tuteur :</strong> {{ e.nom_responsables }} ({{ e.lien_parente or 'Tuteur' }})</p>
+                                            <p class="mb-1"><strong>Téléphone principal :</strong> {{ e.telephone_principal }}</p>
+                                            <p class="mb-1"><strong>Téléphone second. :</strong> {{ e.telephone_secondaire or '-' }}</p>
                                         </div>
                                     </div>
-                                    <hr>
-                                    <h6 class="fw-bold text-success mb-2"><i class="fa-solid fa-receipt me-2"></i>Historique des Frais Payés</h6>
-                                    <table class="table table-sm table-bordered">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Rubrique</th>
-                                                <th>Trimestre</th>
-                                                <th>Montant (FC)</th>
-                                                <th>Mode</th>
-                                                <th>Date</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for p in e.paiements %}
-                                            <tr>
-                                                <td>{{ p.rubrique.nom if p.rubrique else '-' }}</td>
-                                                <td>{{ p.trimestre }}</td>
-                                                <td class="fw-bold text-success">{{ "{:,.0f}".format(p.montant) }} FC</td>
-                                                <td>{{ p.mode_paiement }}</td>
-                                                <td>{{ p.date_paiement.strftime('%d/%m/%Y') }}</td>
-                                            </tr>
-                                            {% else %}
-                                            <tr>
-                                                <td colspan="5" class="text-center text-muted">Aucun paiement enregistré pour le moment.</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
+
+                                    <!-- Résumé de la Situation Financière -->
+                                    <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-wallet me-2"></i>Situation Financière</h6>
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-md-4">
+                                            <div class="stat-card bg-light border">
+                                                <small class="text-muted d-block fw-bold">TOTAL FIXÉ</small>
+                                                <span class="fw-bold fs-6">{{ "{:,.0f}".format(item.total_du) }} FC</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="stat-card bg-success-subtle border border-success">
+                                                <small class="text-success d-block fw-bold">DÉJÀ PAYÉ</small>
+                                                <span class="fw-bold fs-6 text-success">{{ "{:,.0f}".format(item.total_paye) }} FC</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="stat-card {% if item.reste_a_payer > 0 %}bg-danger-subtle border border-danger{% else %}bg-light border{% endif %}">
+                                                <small class="{% if item.reste_a_payer > 0 %}text-danger{% else %}text-muted{% endif %} d-block fw-bold">RESTE À PAYER</small>
+                                                <span class="fw-bold fs-6 {% if item.reste_a_payer > 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                    {{ "{:,.0f}".format(item.reste_a_payer) }} FC
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Détail des Paiements -->
+                                    <h6 class="fw-bold text-secondary mb-2"><i class="fa-solid fa-list-check me-2"></i>Historique des paiements versés</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-striped border align-middle mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Rubrique</th>
+                                                    <th>Trimestre</th>
+                                                    <th>Montant Payé</th>
+                                                    <th>Mode</th>
+                                                    <th>Date</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for p in e.paiements %}
+                                                <tr>
+                                                    <td>{{ p.rubrique.nom if p.rubrique else '-' }}</td>
+                                                    <td>{{ p.trimestre }}</td>
+                                                    <td class="fw-bold text-success">{{ "{:,.0f}".format(p.montant) }} FC</td>
+                                                    <td>{{ p.mode_paiement }}</td>
+                                                    <td>{{ p.date_paiement.strftime('%d/%m/%Y %H:%M') }}</td>
+                                                </tr>
+                                                {% else %}
+                                                <tr>
+                                                    <td colspan="5" class="text-center text-muted py-2">Aucun versement enregistré.</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                                 <div class="modal-footer d-flex justify-content-between">
                                     <a href="{{ url_for('imprimer_recu', type_recu='inscription', id_recu=e.id) }}" target="_blank" class="btn btn-outline-primary btn-sm">
-                                        <i class="fa-solid fa-print me-1"></i> Imprimer Reçu d'Inscription / Carte
+                                        <i class="fa-solid fa-print me-1"></i> Imprimer Carte / Fiche
                                     </a>
-                                    <a href="{{ url_for('paiement', eleve_id=e.id) }}" class="btn btn-success btn-sm">
-                                        <i class="fa-solid fa-plus-circle me-1"></i> Enregistrer un Paiement
+                                    <a href="{{ url_for('paiement', eleve_id=e.id) }}" class="btn btn-success btn-sm fw-bold">
+                                        <i class="fa-solid fa-cash-register me-1"></i> Enregistrer un Paiement
                                     </a>
                                 </div>
                             </div>
@@ -151,7 +199,7 @@
                     </div>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-3">Aucun élève trouvé.</td>
+                        <td colspan="6" class="text-center text-muted py-3">Aucun élève ne correspond à vos critères.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
