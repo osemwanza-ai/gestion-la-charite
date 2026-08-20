@@ -39,7 +39,7 @@ class RubriqueFrais(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nom = db.Column(db.String(100), nullable=False)
     montant = db.Column(db.Float, nullable=False)
-    section = db.Column(db.String(50))  # Optionnel : si un frais s'applique à une section précise
+    section = db.Column(db.String(50))
 
 class Paiement(db.Model):
     __tablename__ = 'paiements'
@@ -55,7 +55,7 @@ class Paiement(db.Model):
 
 
 # ==========================================
-# ROUTES DE L'APPLICATION
+# ROUTES
 # ==========================================
 
 @app.route('/')
@@ -75,7 +75,6 @@ def liste_eleves():
 
     query = Eleve.query
 
-    # Filtre par nom complet
     if nom_filter:
         query = query.filter(Eleve.nom_complet.ilike(f"%{nom_filter}%"))
     if section_filter:
@@ -92,7 +91,6 @@ def liste_eleves():
         total_paye = sum(p.montant for p in e.paiements)
         reste_a_payer = max(0.0, total_frais_fixe - total_paye)
         
-        # Filtre selon le statut financier
         if statut_filter == 'paye' and total_paye == 0:
             continue
         if statut_filter == 'non_paye' and total_paye > 0:
@@ -122,7 +120,6 @@ def liste_eleves():
 @app.route('/inscription', methods=['GET', 'POST'])
 def inscription():
     if request.method == 'POST':
-        # Génération matricule automatique simple
         dernier_eleve = Eleve.query.order_by(Eleve.id.desc()).first()
         next_id = (dernier_eleve.id + 1) if dernier_eleve else 1
         matricule = f"CSC-{datetime.now().year}-{next_id:04d}"
