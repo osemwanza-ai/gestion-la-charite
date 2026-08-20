@@ -3,180 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuration Administrateur - C.S. La Charité</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Administration des Frais - CS La Charité</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-light">
 
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>⚙️ Configuration Administrateur des Frais</h2>
-        <a href="/" class="btn btn-secondary">⬅️ Tableau de Bord</a>
+        <div>
+            <h2 class="fw-bold text-danger m-0">Administration & Configuration</h2>
+            <p class="text-muted small m-0">Gestion des rubriques et blocs de frais scolaires</p>
+        </div>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-arrow-left me-1"></i> Tableau de bord
+        </a>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <div class="row">
-        <!-- Configuration Frais d'Inscription -->
-        <div class="col-md-5 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0">Frais d'Inscription Général</h5>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('admin') }}">
-                        <input type="hidden" name="action" value="frais_inscription">
-                        <div class="mb-3">
-                            <label class="form-label">Montant du frais d'inscription (FC)</label>
-                            <input type="number" name="montant" class="form-control" value="{{ frais_inscription.montant if frais_inscription else '' }}" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Enregistrer</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Configuration des Rubriques -->
-        <div class="col-md-7 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-dark text-white">
-                    <h5 class="card-title mb-0">Ajouter une Rubrique de Frais</h5>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('admin') }}">
-                        <input type="hidden" name="action" value="ajouter_rubrique">
-                        
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Nom de la rubrique</label>
-                            <input type="text" name="nom" class="form-control" placeholder="Ex: Minerval, Bulletin..." required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Montant (FC)</label>
-                            <input type="number" name="montant" class="form-control" placeholder="Ex: 45000" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Sections concernées :</label>
-                            <div class="border p-3 rounded bg-white">
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="check_toutes" name="sections" value="Toutes" onchange="toggleToutesSections(this)">
-                                    <label class="form-check-label fw-bold text-primary" for="check_toutes">📌 Toutes les sections</label>
-                                </div>
-                                <hr>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input section-checkbox" type="checkbox" name="sections" value="Maternelle">
-                                    <label class="form-check-label">Maternelle</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input section-checkbox" type="checkbox" name="sections" value="Primaire">
-                                    <label class="form-check-label">Primaire</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input section-checkbox" type="checkbox" name="sections" value="Secondaire">
-                                    <label class="form-check-label">Secondaire / EB</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input section-checkbox" type="checkbox" name="sections" value="Humanités">
-                                    <label class="form-check-label">Humanités</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn btn-success w-100">➕ Créer la rubrique</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tableau des Rubriques -->
-    <div class="card shadow-sm mt-3">
-        <div class="card-header bg-secondary text-white">
-            <h5 class="card-title mb-0">Rubriques Enregistrées</h5>
-        </div>
-        <div class="card-body">
-            <table class="table table-striped align-middle">
-                <thead>
-                    <tr>
-                        <th>Nom</th>
-                        <th>Montant</th>
-                        <th>Sections</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for r in rubriques %}
-                    <tr>
-                        <td><strong>{{ r.nom }}</strong></td>
-                        <td>{{ "{:,.0f}".format(r.montant) }} FC</td>
-                        <td><span class="badge bg-info text-dark">{{ r.sections }}</span></td>
-                        <td class="text-end">
-                            <button type="button" class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#editModal{{ r.id }}">✏️ Modifier</button>
-                            <form method="POST" action="{{ url_for('admin') }}" class="d-inline" onsubmit="return confirm('Supprimer cette rubrique ?');">
-                                <input type="hidden" name="action" value="supprimer_rubrique">
-                                <input type="hidden" name="rubrique_id" value="{{ r.id }}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">🗑️</button>
-                            </form>
-                        </td>
-                    </tr>
-
-                    <!-- MODAL MODIFICATION -->
-                    <div class="modal fade" id="editModal{{ r.id }}" tabindex="-1">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <form method="POST" action="{{ url_for('admin') }}">
-                                    <div class="modal-header bg-primary text-white">
-                                        <h5 class="modal-title">Modifier : {{ r.nom }}</h5>
-                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <input type="hidden" name="action" value="modifier_rubrique">
-                                        <input type="hidden" name="rubrique_id" value="{{ r.id }}">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Nom</label>
-                                            <input type="text" name="nom" class="form-control" value="{{ r.nom }}" required>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Montant (FC)</label>
-                                            <input type="number" name="montant" class="form-control" value="{{ r.montant }}" required>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                        <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
+    <div class="row g-4">
+        <!-- Formulaire d'ajout -->
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm p-4">
+                <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-plus-circle me-2"></i>Ajouter une Rubrique</h5>
+                <form method="POST" action="{{ url_for('admin') }}">
+                    <input type="hidden" name="action" value="ajouter_rubrique">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nom de la rubrique / frais</label>
+                        <input type="text" name="nom" class="form-control" placeholder="Ex: Minerval 1er Trimestre" required>
                     </div>
-                    {% else %}
-                    <tr><td colspan="4" class="text-center text-muted">Aucune rubrique enregistrée.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Montant (FC / USD)</label>
+                        <input type="number" step="0.01" name="montant" class="form-control" placeholder="Ex: 50000" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Section concernée</label>
+                        <select name="section" class="form-select">
+                            <option value="Toutes">Toutes les sections</option>
+                            <option value="Maternelle">Maternelle</option>
+                            <option value="Primaire">Primaire</option>
+                            <option value="Secondaire">Secondaire</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-danger w-100 fw-bold">
+                        <i class="fa-solid fa-save me-1"></i> Enregistrer la rubrique
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Liste des rubriques existantes -->
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm p-4">
+                <h5 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-list me-2"></i>Blocs de Frais Configurés</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Rubrique</th>
+                                <th>Section</th>
+                                <th>Montant</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in rubriques %}
+                            <tr>
+                                <td class="fw-bold">{{ r.nom }}</td>
+                                <td><span class="badge bg-info text-dark">{{ r.section or 'Toutes' }}</span></td>
+                                <td class="fw-bold text-success">{{ "{:,.0f}".format(r.montant) }} FC</td>
+                                <td class="text-end">
+                                    <form method="POST" action="{{ url_for('admin') }}" class="d-inline">
+                                        <input type="hidden" name="action" value="supprimer_rubrique">
+                                        <input type="hidden" name="rubrique_id" value="{{ r.id }}">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Supprimer cette rubrique ?')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">Aucune rubrique configurée.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<script>
-function toggleToutesSections(master) {
-    let checkboxes = document.querySelectorAll('.section-checkbox');
-    checkboxes.forEach(cb => {
-        cb.checked = master.checked;
-        cb.disabled = master.checked;
-    });
-}
-</script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
